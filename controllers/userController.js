@@ -118,10 +118,10 @@ export const getProfile = async(req, res)=>{
         const exists = await users.findOne({ address: address });
         console.log("exists",exists);
         if (!exists) {
-            return res.status(400).json({ message: "No such user found" });
+            return res.status(400).json({ message: "No such user found" ,status:400});
         } else {
             const userRefferData=users.findOne({ address });
-            return res.status(200).json({ userData: exists,data:userRefferData.userId})
+            return res.status(200).json({ userData: exists,data:userRefferData.userId,status:200})
         }
 
     }catch(error){
