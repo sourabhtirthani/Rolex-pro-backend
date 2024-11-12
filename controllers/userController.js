@@ -71,10 +71,15 @@ export const freeRegistration = async (req, res)=>{
         // if(!treeResult){
         //     return res.status(400).json({message : "No tree result"})
         // } 
+        const userId = Math.floor(Math.random()*10000); 
+        console.log("userId",userId);
+        const userName=`Rolex_${userId}`
         const newUser = await users.create({
             address,
             referBy : referBy,
             parentAddress:"0x0000000000000000000000000000000000000000",
+            userId,
+            name:userName
         });
 
         const result = await users.updateOne(

@@ -5,6 +5,10 @@ const userSchema = new Schema({
         type : String,
         default : ""
     },
+    userId: {  // Changed type to String to allow alphanumeric IDs
+        type: String,
+        required: true
+    },
     email : {
         type : String,
         default : ""
