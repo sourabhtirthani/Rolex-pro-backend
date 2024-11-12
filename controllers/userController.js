@@ -53,16 +53,16 @@ export const freeRegistration = async (req, res)=>{
     try{
         const {address,referBy} = req.body;
         if(!address){
-            return res.status(400).json({message : "Please provide all the details"});
+            return res.status(400).json({message : "Please provide all the details",status:400});
         }
         const exists = await users.findOne({address});
         
         if(exists){
-            return res.status(400).json({message : "User already exists"})
+            return res.status(400).json({message : "User already exists",status:400})
         }
         const isReferExits =await users.findOne({address:referBy});
         if(!isReferExits){
-            return res.status(400).json({message : "Reffer Address Not found"})
+            return res.status(400).json({message : "Reffer Address Not found",status:400})
         }
 
         // let sendHalfAmountForReffal=referBy;
@@ -82,11 +82,11 @@ export const freeRegistration = async (req, res)=>{
             { $push: { referTo: address } }
         );
 
-        return res.status(201).json({message : "All Good! Welcome to Rolex club "})
+        return res.status(201).json({message : "All Good! Welcome to Rolex club ",status:201})
     
     }catch(error){
         console.log(`error in create profile : ${error}`);
-        return res.status(500).json({error : `Internal Server errorS:${error}`})
+        return res.status(500).json({error : `Internal Server errorS:${error}`,status:500})
     }
 }
 export const checkUser=async(req,res)=>{
