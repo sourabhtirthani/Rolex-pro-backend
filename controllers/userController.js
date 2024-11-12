@@ -51,27 +51,37 @@ export const createProfile = async (req, res)=>{
 
 export const freeRegistration = async (req, res)=>{
     try{
-        const {address} = req.body;
+        const {address,referBy} = req.body;
         if(!address){
             return res.status(400).json({message : "Please provide all the details"});
         }
         const exists = await users.findOne({address});
-       
+        
         if(exists){
             return res.status(400).json({message : "User already exists"})
         }
+        const isReferExits =await users.findOne({address:referBy});
+        if(!isReferExits){
+            return res.status(400).json({message : "Reffer Address Not found"})
+        }
+
         // let sendHalfAmountForReffal=referBy;
         // let treeResult =await traverseTree(referBy);
         // //console.log("treeResult",treeResult);
         // if(!treeResult){
         //     return res.status(400).json({message : "No tree result"})
-        // }
+        // } 
         const newUser = await users.create({
             address,
-            referBy : "0x0000000000000000000000000000000000000000",
+            referBy : referBy,
             parentAddress:"0x0000000000000000000000000000000000000000",
         });
-       
+
+        const result = await users.updateOne(
+            { address: referBy }, 
+            { $push: { referTo: address } }
+        );
+
         return res.status(201).json({message : "All Good! Welcome to Rolex club "})
     
     }catch(error){
@@ -100,15 +110,17 @@ export const checkUser=async(req,res)=>{
 
 export const getProfile = async(req, res)=>{
     try{
-        const {address} = req.params;
+        const {address} = req.query;
         if(!address){
             return res.status(400).json({error : "Please specify the address of the user."})
         }
-        const exists = await users .findOne({ address: address });
+        console.log("getProfile",address);
+        const exists = await users.findOne({ address: address });
+        console.log("exists",exists);
         if (!exists) {
             return res.status(400).json({ message: "No such user found" });
         } else {
-            const userRefferData=users.findOne({ address: exists.referBy });
+            const userRefferData=users.findOne({ address });
             return res.status(200).json({ userData: exists,data:userRefferData.userId})
         }
 
