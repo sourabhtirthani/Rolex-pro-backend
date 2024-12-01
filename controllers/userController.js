@@ -23,13 +23,10 @@ export const createProfile = async (req, res)=>{
         if(exists){
             return res.status(200).json({message : "User already exists"})
         }
-        console.log("isReferExits.referTo.length",isReferExits.referTo.length);
         if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2){
-            console .log("helllo inside if ",isReferExits.referBy)
             referPaymentAddress=isReferExits.referBy;
         }
         else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3) referPaymentAddress=referBy;
-        console.log("referPaymentAddress",referPaymentAddress);
         if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
         const uplineAddresses=await fetchUplineAddresses(3);
         const data={
@@ -115,59 +112,42 @@ export const updateProfile=async(req,res)=>{
     }
 }
 
-export const buyGlobalIncome = async (req, res)=>{
+export const buyProIncome = async (req, res)=>{
     try{
         const {address , type} = req.body;
         if(!address){
             return res.status(400).json({message : "Please provide all the details"});
         }
         const exists = await users.findOne({address});
-        if(exists){
-            return res.status(200).json({message : "User already exists"})
+        if(!exists){
+            return res.status(200).json({message : "User doesnt exists"})
         }
         
         const uplineAddress=await fetchParentForTree(address,type);
-        
+        console.log("uplineAddress",uplineAddress);
         return res.json({ success:true,status:200,address:uplineAddress,message:"All good"})
     }catch(error){
         console.log(`error in create profile : ${error}`);
         return res.json({success:false,status:500,error : "Internal Server error"})
     }
 }
-export const updateProGlobal=async(req,res)=>{
+export const updateProIncome=async(req,res)=>{
     try{
-        const {address ,paymentAddress,amount} = req.body;
+        const {address ,amount} = req.body;
         
         const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
 
-        await users.updateOne({address:paymentAddress},{$set:{ globalMatrixIncome:((existsReferPaymentAddress.refferalIncome)+(referPaymentAmount))}})
-
-        await users.create({
-            address,
-            referBy : referBy,
-            parentAddress,
-            userId,
-            name:`Rolex_${userId}`
-        });
-
-        // await incomeTransactions.create({
-        //     fromUserId:userId,
-        //     toUserId:existsReferPaymentAddress.userId,
-        //     fromAddress:address,
-        //     toAddress:referPaymentAddress,
-        //     incomeType:"Referral income",
-        //     amount:referPaymentAmount,
-        //     transactionHash:transactionHash
-        // })
-        const updateDataForUser={
-            transactionHash,
-            isActive:true
+        let parentAddress=await addUserToTree(address,amount)
+        await users.findOneAndUpdate(
+            { address: referBy },
+            { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
+            { new: true }
+            );
         
-        }
-        await users.updateOne({address},{$set:updateDataForUser});
+        await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
 
-        
+
     }catch(error){
 
     }
@@ -309,7 +289,6 @@ async function fetchUplineAddresses(treeType) {
     // Start finding uplines from the determined parent node
     const uplineAddresses = [];
     let currentNode = parentNode;
-    console.log("currentNode",currentNode,uplineAddresses.length)
     while (currentNode && uplineAddresses.length < 3) {
         uplineAddresses.push(currentNode.address);
         console.log("uplineAddresses inside loop",uplineAddresses);
@@ -317,7 +296,6 @@ async function fetchUplineAddresses(treeType) {
     }
 
     // Pad with admin address if fewer than 3 uplines are found
-    console.log("uplineAddresses",uplineAddresses);
     while (uplineAddresses.length < 3) {
         uplineAddresses.push(process.env.ADMIN_ADDRESS);
     }
@@ -333,12 +311,11 @@ async function fetchParentForTree(userAddress, fundAmount) {
         treeType, // Match the correct tree
         $expr: { $lt: [{ $size: "$children" }, 4] }, // Node must have less than 4 children
     }).sort({ level: 1, createdAt: 1 }); // Closest to root, oldest nodes first
-
     if (!parentNode) {
         // If no parent node exists, this is the root node
         return null; // Indicates this user will become the root node for the tree
     }
 
     // Return the parentAddress for the next insertion
-    return parentNode.userAddress;
+    return parentNode.address;
 }
