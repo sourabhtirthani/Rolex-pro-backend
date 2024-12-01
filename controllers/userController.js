@@ -114,6 +114,7 @@ export const updateProfile=async(req,res)=>{
 
 export const buyProIncome = async (req, res)=>{
     try{
+        console.log("helo")
         const {address , type} = req.body;
         if(!address){
             return res.status(400).json({message : "Please provide all the details"});
@@ -122,8 +123,7 @@ export const buyProIncome = async (req, res)=>{
         if(!exists){
             return res.status(200).json({message : "User doesnt exists"})
         }
-        
-        const uplineAddress=await fetchParentForTree(address,type);
+        const uplineAddress=await fetchParentForTree(type);
         console.log("uplineAddress",uplineAddress);
         return res.json({ success:true,status:200,address:uplineAddress,royalyAddress:process.env.DAILY_ROYALTIES,message:"All good"})
     }catch(error){
@@ -133,15 +133,18 @@ export const buyProIncome = async (req, res)=>{
 }
 export const updateProIncome=async(req,res)=>{
     try{
-        const {address ,amount} = req.body;
+        const {address, uplineAddress ,amount} = req.body;
         
         const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-
-        let parentAddress=await addUserToTree(address,amount)
-        
-        await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
-
+        const exists = await users.findOne({address:uplineAddress});
+        if(!exists){
+            return res.status(200).json({message : "User doesnt exists"})
+        }
+        await addUserToTree(address,amount)
+        let newAmount=amount-(amount/10)
+        await users.updateOne({address:uplineAddress},{$set:{ powerMatrixIncome:((exists.powerMatrixIncome)+(newAmount))}})
+        return res.json({ success:true,status:201,message:"user Buy Pro Income success fully"})
 
     }catch(error){
 
@@ -248,7 +251,7 @@ async function addUserToTree(userAddress,treeType) {
             address:adminAdd,
             children: [userAddress],
             level: 0,
-            treeType: 3, // Specify the correct tree type (e.g., 3 USDT tree)
+            treeType: treeType, // Specify the correct tree type (e.g., 3 USDT tree)
         });
         console.log("rootNode",rootNode);
         return adminAdd;
@@ -298,7 +301,7 @@ async function fetchUplineAddresses(treeType) {
     return uplineAddresses;
 }
 
-async function fetchParentForTree(userAddress, fundAmount) {
+async function fetchParentForTree( fundAmount) {
     const treeType = fundAmount; // Use fundAmount as treeType
 
     // Find the next available parent node in the specified tree
@@ -306,8 +309,9 @@ async function fetchParentForTree(userAddress, fundAmount) {
         treeType, // Match the correct tree
         $expr: { $lt: [{ $size: "$children" }, 4] }, // Node must have less than 4 children
     }).sort({ level: 1, createdAt: 1 }); // Closest to root, oldest nodes first
+    console.log("parentNode",parentNode);
+
     if (!parentNode) {
-        // If no parent node exists, this is the root node
         return null; // Indicates this user will become the root node for the tree
     }
 
