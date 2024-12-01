@@ -41,6 +41,9 @@ const userSchema = new Schema({
     referTo : [{
         type : String
     }],
+    myTeam : [{
+        type : String
+    }],
     mobileNumber : {
         type : Number
     },
