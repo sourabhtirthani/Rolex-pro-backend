@@ -1,6 +1,6 @@
 import express from 'express';
 import errorHandler from '../middlewares/errorHandler.js';
-import {   createProfile, freeRegistration, getProfile, updateProfile} from '../controllers/userController.js';
+import {   buyGlobalIncome, createProfile, freeRegistration, getProfile, updateProfile} from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -9,6 +9,8 @@ const router = express.Router();
 // router.get('/userdetails/:address' , errorHandler , getProfile)
 router.patch('/updateData',errorHandler,updateProfile)
 router.get('/checkUser',errorHandler,getProfile)
+router.post('/buyglobalPackage',errorHandler,buyGlobalIncome);
+router.patch('/buyglobalPackage',errorHandler,buyGlobalIncome);
 // router.post('/userdata' , fetchUserData);
 router.post('/freeResistration',errorHandler,freeRegistration)
 // package Router 

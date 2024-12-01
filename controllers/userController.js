@@ -60,8 +60,6 @@ export const updateProfile=async(req,res)=>{
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
         const userId = Math.floor(Math.random()*10000);
         let parentAddress=await addUserToTree(address,3)
-        // let parentAddress="0x9d0893114A813f8418Cf9EfEf5D8E9DdAB78AA9e"
-        console.log("parentAddress",parentAddress); 
         await users.findOneAndUpdate(
             { address: referBy },
             { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
@@ -78,47 +76,37 @@ export const updateProfile=async(req,res)=>{
             name:`Rolex_${userId}`
         });
 
-        await incomeTransactions.create({
-            fromUserId:userId,
-            toUserId:existsReferPaymentAddress.userId,
-            fromAddress:address,
-            toAddress:referPaymentAddress,
-            incomeType:"Referral income",
-            amount:referPaymentAmount,
-            transactionHash:transactionHash
-        })
-        await incomeTransactions.create({
-            fromUserId:userId,
-            toUserId:1,
-            fromAddress:address,
-            toAddress:process.env.DAILY_ROYALTIES,
-            incomeType:"Royalty income",
-            amount:0.6,
-            transactionHash:transactionHash
-        })
-        const updateDataForUser={
-            transactionHash,
-            isActive:true
-        }
-        await users.updateOne({address},{$set:updateDataForUser});
-
-        // let uplineAddressesData;
-        // console.log("uplineAddresses new",uplineAddresses)
-        // for(let i in uplineAddresses){
-            
-        //     uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
-        //     console.log("uplineAddresses",i,uplineAddresses[i]);
-        //     await incomeTransactions.create({
-        //         fromUserId:userId,
-        //         toUserId:existsReferPaymentAddress.userId,
-        //         fromAddress:address,
-        //         toAddress:uplineAddresses[i],
-        //         incomeType:"Referral income",
-        //         amount:uplineAddressesAmount[i],
-        //         transactionHash:transactionHash
-        //     })
-        //     await users.updateOne({"address":uplineAddresses[i]},{$set:{"levelIncome":(uplineAddressesData.levelIncome+uplineAddressesAmount[i])}});
+        // await incomeTransactions.create({
+        //     fromUserId:userId,
+        //     toUserId:existsReferPaymentAddress.userId,
+        //     fromAddress:address,
+        //     toAddress:referPaymentAddress,
+        //     incomeType:"Referral income",
+        //     amount:referPaymentAmount,
+        //     transactionHash:transactionHash
+        // })
+        // await incomeTransactions.create({
+        //     fromUserId:userId,
+        //     toUserId:1,
+        //     fromAddress:address,
+        //     toAddress:process.env.DAILY_ROYALTIES,
+        //     incomeType:"Royalty income",
+        //     amount:0.6,
+        //     transactionHash:transactionHash
+        // })
+        // const updateDataForUser={
+        //     transactionHash,
+        //     isActive:true
         // }
+        // await users.updateOne({address},{$set:updateDataForUser});
+
+        let uplineAddressesData;
+        let i=0;
+        while( i< uplineAddresses.length){            
+             uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
+             await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
+            i++;
+        }
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
@@ -163,15 +151,15 @@ export const updateProGlobal=async(req,res)=>{
             name:`Rolex_${userId}`
         });
 
-        await incomeTransactions.create({
-            fromUserId:userId,
-            toUserId:existsReferPaymentAddress.userId,
-            fromAddress:address,
-            toAddress:referPaymentAddress,
-            incomeType:"Referral income",
-            amount:referPaymentAmount,
-            transactionHash:transactionHash
-        })
+        // await incomeTransactions.create({
+        //     fromUserId:userId,
+        //     toUserId:existsReferPaymentAddress.userId,
+        //     fromAddress:address,
+        //     toAddress:referPaymentAddress,
+        //     incomeType:"Referral income",
+        //     amount:referPaymentAmount,
+        //     transactionHash:transactionHash
+        // })
         const updateDataForUser={
             transactionHash,
             isActive:true
@@ -179,20 +167,7 @@ export const updateProGlobal=async(req,res)=>{
         }
         await users.updateOne({address},{$set:updateDataForUser});
 
-        let uplineAddressesData;
-        for(let i in uplineAddresses){
-            uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
-            await incomeTransactions.create({
-                fromUserId:userId,
-                toUserId:existsReferPaymentAddress.userId,
-                fromAddress:address,
-                toAddress:uplineAddresses[i],
-                incomeType:"Referral income",
-                amount:uplineAddressesAmount[i],
-                transactionHash:transactionHash
-            })
-            await users.updateOne({"address":uplineAddresses[i]},{$set:{"levelIncome":(uplineAddressesData.levelIncome+levelDistribution[i])}});
-        }
+        
     }catch(error){
 
     }
