@@ -125,7 +125,7 @@ export const buyProIncome = async (req, res)=>{
         
         const uplineAddress=await fetchParentForTree(address,type);
         console.log("uplineAddress",uplineAddress);
-        return res.json({ success:true,status:200,address:uplineAddress,message:"All good"})
+        return res.json({ success:true,status:200,address:uplineAddress,royalyAddress:process.env.DAILY_ROYALTIES,message:"All good"})
     }catch(error){
         console.log(`error in create profile : ${error}`);
         return res.json({success:false,status:500,error : "Internal Server error"})
@@ -139,11 +139,6 @@ export const updateProIncome=async(req,res)=>{
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
 
         let parentAddress=await addUserToTree(address,amount)
-        await users.findOneAndUpdate(
-            { address: referBy },
-            { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
-            { new: true }
-            );
         
         await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
 
