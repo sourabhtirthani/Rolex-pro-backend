@@ -248,8 +248,6 @@ export const checkUser=async(req,res)=>{
         return res.status(400).json({message : "Please provide all the details"});
     }
     const exists = await users.findOne({address});
-    const treeType=await getUserTreeTypes(address);
-    exists.propowerincome=treeType.count;
     if(exists){
         return res.status(200).json({message:"User Found",data:exists});
     }else{
@@ -271,11 +269,19 @@ export const getProfile = async(req, res)=>{
         console.log("getProfile",address);
         const exists = await users.findOne({ address: address });
         console.log("exists",exists);
+        const treeType=await getUserTreeTypes(address);
+        const selfIncomeType=await getUserSelfIncome(address);
+        let extraData={
+            propowerincome:treeType.count,
+            royalyAddress:process.env.DAILY_ROYALTIES,
+            adminAddress:process.env.ADMIN_ADDRESS,
+            selfIncome:selfIncomeType.count
+        }
         if (!exists) {
             return res.status(400).json({ message: "No such user found" ,status:400});
         } else {
             const userRefferData=users.findOne({ address });
-            return res.status(200).json({ userData: exists,data:userRefferData.userId,status:200})
+            return res.status(200).json({ userData: exists,otherData:extraData,data:userRefferData.userId,status:200})
         }
 
     }catch(error){
@@ -431,6 +437,22 @@ async function getUserTreeTypes(userAddress) {
     try {
         // Find distinct treeType values for the given user address
         const treeTypes = await TreeNode.distinct("treeType", { address: userAddress });
+
+        // Return the count and the list of tree types
+        return {
+            count: treeTypes.length,
+            treeTypes,
+        };
+    } catch (error) {
+        console.error("Error fetching tree types for user:", error);
+        throw new Error("Failed to fetch tree types.");
+    }
+}
+
+async function getUserSelfIncome(userAddress) {
+    try {
+        // Find distinct treeType values for the given user address
+        const treeTypes = await selfIncome.distinct("amount", { address: userAddress });
 
         // Return the count and the list of tree types
         return {
