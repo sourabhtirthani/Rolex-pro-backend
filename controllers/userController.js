@@ -2,7 +2,7 @@
  import incomeTransactions from "../model/IncomeTransaction.js";
 import users from "../model/User.js";
 import  TreeNode  from "../model/TreeNode.js"; 
-
+import selfIncome from "../model/selfIncome.js";
 import dotenv from 'dotenv'
 dotenv.config();
 // Admin addresses as fallback
@@ -141,15 +141,61 @@ export const updateProIncome=async(req,res)=>{
         if(!exists){
             return res.status(200).json({message : "User doesnt exists"})
         }
-        await addUserToTree(address,amount)
+       await addUserToTree(address,amount)
+        console.log("amount",amount);
         let newAmount=amount-(amount/10)
         await users.updateOne({address:uplineAddress},{$set:{ powerMatrixIncome:((exists.powerMatrixIncome)+(newAmount))}})
+
         return res.json({ success:true,status:201,message:"user Buy Pro Income success fully"})
 
     }catch(error){
-
+        console.log(`error in create profile : ${error}`);
+        return res.json({success:false,status:500,error : "Internal Server error"})
     }
 }
+
+export const buyGlobalIncome = async (req, res)=>{
+    try{
+        console.log("helo")
+        const {address , type} = req.body;
+        if(!address){
+            return res.status(400).json({message : "Please provide all the details"});
+        }
+        const exists = await users.findOne({address});
+        if(!exists){
+            return res.status(200).json({message : "User doesnt exists"})
+        }
+        const uplineAddress=await fetchParentForTree(type);
+        console.log("uplineAddress",uplineAddress);
+        return res.json({ success:true,status:200,address:uplineAddress,royalyAddress:process.env.DAILY_ROYALTIES,message:"All good"})
+    }catch(error){
+        console.log(`error in create profile : ${error}`);
+        return res.json({success:false,status:500,error : "Internal Server error"})
+    }
+}
+export const updateGloablIncome=async(req,res)=>{
+    try{
+        const {address, uplineAddress ,amount} = req.body;
+        
+        const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
+        if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
+        const exists = await users.findOne({address:uplineAddress});
+        if(!exists){
+            return res.status(200).json({message : "User doesnt exists"})
+        }
+       await addUserToTree(address,amount)
+        console.log("amount",amount);
+        let newAmount=amount-(amount/10)
+        await users.updateOne({address:uplineAddress},{$set:{ powerMatrixIncome:((exists.powerMatrixIncome)+(newAmount))}})
+
+        return res.json({ success:true,status:201,message:"user Buy Pro Income success fully"})
+
+    }catch(error){
+        console.log(`error in create profile : ${error}`);
+        return res.json({success:false,status:500,error : "Internal Server error"})
+    }
+}
+
 export const freeRegistration = async (req, res)=>{
     try{
         const {address,referBy} = req.body;
@@ -202,6 +248,8 @@ export const checkUser=async(req,res)=>{
         return res.status(400).json({message : "Please provide all the details"});
     }
     const exists = await users.findOne({address});
+    const treeType=await getUserTreeTypes(address);
+    exists.propowerincome=treeType.count;
     if(exists){
         return res.status(200).json({message:"User Found",data:exists});
     }else{
@@ -232,11 +280,73 @@ export const getProfile = async(req, res)=>{
 
     }catch(error){
         console.log(`error in get profille : ${error.message}`)
-        return res.status(500).json({error : "Internal Server error"})
+        return res.status(500).json({message : error,status:500})
     }
 }
 
 
+export const postselfIncome = async(req, res)=>{
+    try{
+        const {address,amount} = req.body;
+        // if(!address){
+        //     return res.status(400).json({error : "Please specify the address of the user."})
+        // }
+        await selfIncome.create({
+            address,
+            amount,
+        });
+        return res.status(200).json({message:"User invested successfully",status:200})
+    }catch(error){
+        console.log(`error in self income post : ${error.message}`)
+        return res.status(500).json({message : error,status:500})
+    }
+}
+
+export const getSelfIncome=async(req,res)=>{
+    try{
+        const eligibleInvestments = await selfIncome.find({
+            daysRewarded: { $lt: 15 }, // Check if the investment is within the reward duration
+        });
+        console.log("eligibleInvestments",eligibleInvestments);
+        const rewardPercentage = 10; // 10% daily reward
+        const userAddresses = [];
+        const rewardAmounts = [];
+    
+        for (const investment of eligibleInvestments) {
+            const daysElapsed = Math.floor((Date.now() - investment.investmentDate.getTime()) / (1000 * 60 * 60 * 24));
+            const daysToReward = Math.min(daysElapsed - investment.daysRewarded, 15 - investment.daysRewarded);
+            if (daysToReward > 0) {
+                const rewardAmount = (investment.amount * rewardPercentage * daysToReward) / 100;
+    
+                // Add to arrays
+                userAddresses.push(investment.address);
+                rewardAmounts.push((rewardAmount*10**18).toString());
+    
+                // Update rewarded days in DB
+                investment.daysRewarded += daysToReward;
+                await investment.save();
+            }
+        }
+        return res.status(200).json({ data:  { userAddresses, rewardAmounts },status:200})
+
+    }catch(error){
+
+    }
+}
+
+export const updateselfIncome = async(req, res)=>{
+    try{
+        const {addresses} = req.body;
+        await selfIncome.updateMany(
+            { addresses: { $in: addresses }, daysRewarded: { $lt: 15 } },
+            { $inc: { daysRewarded: 1 } } // Increment rewarded days by 1
+        );
+        return res.status(200).json({message:"User rewards distributed  successfully",status:201})
+    }catch(error){
+        console.log(`error in self income post : ${error.message}`)
+        return res.status(500).json({message : error,status:500})
+    }
+}
 
 async function addUserToTree(userAddress,treeType) {
     // Find the next available parent node with less than 4 children
@@ -270,8 +380,6 @@ async function addUserToTree(userAddress,treeType) {
 
     return parentNode.address;
 }
-
-
 
 async function fetchUplineAddresses(treeType) {
       // Find the next available parent node with less than 4 children
@@ -317,4 +425,20 @@ async function fetchParentForTree( fundAmount) {
 
     // Return the parentAddress for the next insertion
     return parentNode.address;
+}
+
+async function getUserTreeTypes(userAddress) {
+    try {
+        // Find distinct treeType values for the given user address
+        const treeTypes = await TreeNode.distinct("treeType", { address: userAddress });
+
+        // Return the count and the list of tree types
+        return {
+            count: treeTypes.length,
+            treeTypes,
+        };
+    } catch (error) {
+        console.error("Error fetching tree types for user:", error);
+        throw new Error("Failed to fetch tree types.");
+    }
 }
