@@ -55,7 +55,7 @@ export const updateProfile=async(req,res)=>{
         }
         const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-        const userId = Math.floor(Math.random()*10000);
+        const userId = Math.floor(Math.random()*1000000);
         let parentAddress=await addUserToTree(address,3)
         await users.findOneAndUpdate(
             { address: referBy },
@@ -141,6 +141,7 @@ export const updateProIncome=async(req,res)=>{
         if(!exists){
             return res.status(200).json({message : "User doesnt exists"})
         }
+        console.log("addUserToTree",amount);
        await addUserToTree(address,amount)
         console.log("amount",amount);
         let newAmount=amount-(amount/10)
@@ -271,11 +272,13 @@ export const getProfile = async(req, res)=>{
         console.log("exists",exists);
         const treeType=await getUserTreeTypes(address);
         const selfIncomeType=await getUserSelfIncome(address);
+        const team = await fetchTeam(address);
         let extraData={
             propowerincome:treeType.count,
             royalyAddress:process.env.DAILY_ROYALTIES,
             adminAddress:process.env.ADMIN_ADDRESS,
-            selfIncome:selfIncomeType.count
+            selfIncome:selfIncomeType.count,
+            myTeam:team.length
         }
         if (!exists) {
             return res.status(400).json({ message: "No such user found" ,status:400});
@@ -297,6 +300,22 @@ export const postselfIncome = async(req, res)=>{
         // if(!address){
         //     return res.status(400).json({error : "Please specify the address of the user."})
         // }
+        let selfIncomeInfo=await getUserSelfIncome(address)
+        if(selfIncomeInfo.treeTypes.includes(amount))  return res.status(401).json({message : "user Already Bought this",status:401})
+         // Check if user has any active investments within 15 days
+        const fifteenDaysAgo = new Date(Date.now() - 15 * 24 * 60 * 60 * 1000);
+
+        const activeInvestment = await selfIncome.findOne({
+            address: address,
+            investmentDate: { $gte: fifteenDaysAgo }, // Investments made within the last 15 days
+        });
+
+        if (activeInvestment) {
+            return res.status(403).json({
+                message: "You cannot purchase another plan within 15 days of your previous investment.",
+                status: 403,
+            });
+        }
         await selfIncome.create({
             address,
             amount,
@@ -313,17 +332,17 @@ export const getSelfIncome=async(req,res)=>{
         const eligibleInvestments = await selfIncome.find({
             daysRewarded: { $lt: 15 }, // Check if the investment is within the reward duration
         });
-        console.log("eligibleInvestments",eligibleInvestments);
         const rewardPercentage = 10; // 10% daily reward
         const userAddresses = [];
         const rewardAmounts = [];
-    
+        let royaltyAmount=0;
         for (const investment of eligibleInvestments) {
             const daysElapsed = Math.floor((Date.now() - investment.investmentDate.getTime()) / (1000 * 60 * 60 * 24));
             const daysToReward = Math.min(daysElapsed - investment.daysRewarded, 15 - investment.daysRewarded);
             if (daysToReward > 0) {
-                const rewardAmount = (investment.amount * rewardPercentage * daysToReward) / 100;
-    
+                let rewardAmount = (investment.amount * rewardPercentage * daysToReward) / 100;
+                rewardAmount=rewardAmount-(rewardAmount/10)
+                royaltyAmount+=Number+5((rewardAmount/10))
                 // Add to arrays
                 userAddresses.push(investment.address);
                 rewardAmounts.push((rewardAmount*10**18).toString());
@@ -333,7 +352,8 @@ export const getSelfIncome=async(req,res)=>{
                 await investment.save();
             }
         }
-        return res.status(200).json({ data:  { userAddresses, rewardAmounts },status:200})
+        console.log("")
+        return res.status(200).json({ data:  { userAddresses, rewardAmounts,royaltyAmount },status:200})
 
     }catch(error){
 
@@ -464,3 +484,37 @@ async function getUserSelfIncome(userAddress) {
         throw new Error("Failed to fetch tree types.");
     }
 }
+
+const fetchTeam = async (userId) => {
+    try {
+        // Helper function for recursion
+        const getTeamMembers = async (userIds, team = []) => {
+            if (userIds.length === 0) return team;
+
+            // Find all users referred by the current set of user IDs
+            const referredUsers = await users.find({ address: { $in: userIds } }, { address: 1, referTo: 1 });
+
+            // Add referred users to the team
+            const newTeam = [...team, ...referredUsers];
+
+            // Extract the addresses of the next level referrals
+            const nextLevelAddresses = referredUsers.flatMap(user => user.referTo);
+
+            // Recurse for the next level referrals
+            return getTeamMembers(nextLevelAddresses, newTeam);
+        };
+
+        // Start recursion with the given user's address
+        const user = await users.findOne({ address: userId }, { referTo: 1 });
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        // Fetch the full team
+        const team = await getTeamMembers(user.referTo);
+        return team;
+    } catch (error) {
+        console.error(`Error fetching team for user ${userId}: ${error.message}`);
+        throw error;
+    }
+};
