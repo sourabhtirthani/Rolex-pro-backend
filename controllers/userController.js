@@ -272,13 +272,11 @@ export const getProfile = async(req, res)=>{
         console.log("exists",exists);
         const treeType=await getUserTreeTypes(address);
         const selfIncomeType=await getUserSelfIncome(address);
-        const team = await fetchTeam(address);
         let extraData={
             propowerincome:treeType.count,
             royalyAddress:process.env.DAILY_ROYALTIES,
             adminAddress:process.env.ADMIN_ADDRESS,
             selfIncome:selfIncomeType.count,
-            myTeam:team.length
         }
         if (!exists) {
             return res.status(400).json({ message: "No such user found" ,status:400});
