@@ -153,6 +153,34 @@ export const updateUserProfile = async(req, res)=>{
         return res.status(500).json({error : "Internal Server error"})
     }
 }
+export const previewProfile = async(req, res)=>{
+    try{
+        const {userId} = req.query;
+        if(!userId){
+            return res.status(400).json({error : "Please specify the userId of the user."})
+        }
+        const exists = await users.findOne({ userId });
+        const treeType=await getUserTreeTypes(exists.address);
+        const selfIncomeType=await getUserSelfIncome(exists.address);
+        let extraData={
+            propowerincome:treeType.count,
+            royalyAddress:process.env.DAILY_ROYALTIES,
+            adminAddress:process.env.ADMIN_ADDRESS,
+            selfIncome:selfIncomeType.count,
+        }
+        if (!exists) {
+            return res.status(400).json({ message: "No such user found" ,status:400});
+        } else {
+            const userRefferData=users.findOne({ userId });
+            return res.status(200).json({ userData: exists,otherData:extraData,data:userRefferData.userId,status:200})
+        }
+
+    }catch(error){
+        console.log(`error in get profille : ${error.message}`)
+        return res.status(500).json({message : error,status:500})
+    }
+}
+
 export const buyProIncome = async (req, res)=>{
     try{
         console.log("helo")
@@ -563,7 +591,7 @@ const fetchTeam = async (userId) => {
     }
 };
 
-// Function to upload a file to Cloudinary
+
 const uploadFileToCloudinary = async (filePath) => {
     try {
       const result = await cloudinary.uploader.upload(filePath, { folder: 'rolex-pro' });
@@ -581,5 +609,6 @@ const uploadFileToCloudinary = async (filePath) => {
       // Throw the error to handle it in the calling function
       throw new Error('Cloudinary upload failed');
     }
-  };
+};
   
+
