@@ -111,7 +111,39 @@ export const updateProfile=async(req,res)=>{
         return res.json({success:false,status:500,message : error})
     }
 }
+export const updateUserProfile = async(req, res)=>{
+    try{
+        const { address, name } = req.body;
+        
+        if (!address) {
+            return res.status(400).json({ message: "Please provide address" });
+        }
+        const existingUser = await users.findOne({address : address});
+        if(!existingUser){
+            return res.status(400).json({message : "No such user found"})
+        }
+        // const profilePicture =  req.files?.profilePicture ? req.files.profilePicture[0].filename : existingUser.profilePicture;
+        const updateObject = {};
+        if (name) updateObject.name = name;
+        if (req.files && req.files.profilePicture) {
+            updateObject.profilePicture = req.files.profilePicture[0].filename;        // adds the profile picture in the object
+        }
 
+        const updatedUser = await users.findOneAndUpdate(
+            { address: address},          //updates the user with the provided address
+            { $set: updateObject },
+            { new: true }
+        ); 
+        if (!updatedUser) {
+            return res.status(404).json({ message: "User not found or invalid transactionHash" });
+        }
+        return res.status(200).json({ message: "Profile updated successfully"});
+
+    }catch(error){
+        console.log(`error in updat profile function : ${error.message}`)
+        return res.status(500).json({error : "Internal Server error"})
+    }
+}
 export const buyProIncome = async (req, res)=>{
     try{
         console.log("helo")
@@ -278,9 +310,14 @@ export const getProfile = async(req, res)=>{
             adminAddress:process.env.ADMIN_ADDRESS,
             selfIncome:selfIncomeType.count,
         }
+        console.log("hi")
         if (!exists) {
+            console.log("hi")
+
             return res.status(400).json({ message: "No such user found" ,status:400});
         } else {
+            console.log("hi")
+
             const userRefferData=users.findOne({ address });
             return res.status(200).json({ userData: exists,otherData:extraData,data:userRefferData.userId,status:200})
         }

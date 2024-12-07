@@ -1,11 +1,14 @@
 import express from 'express';
 import errorHandler from '../middlewares/errorHandler.js';
-import {    buyProIncome, createProfile, freeRegistration, getProfile, getSelfIncome, postselfIncome, updateProfile, updateProIncome, updateselfIncome} from '../controllers/userController.js';
+import { upload } from '../middlewares/multer.js';
+
+import {    buyProIncome, createProfile, freeRegistration, getProfile, getSelfIncome, postselfIncome, updateProfile, updateProIncome, updateselfIncome, updateUserProfile} from '../controllers/userController.js';
 
 const router = express.Router();
 
 router.post('/create' , [errorHandler] , createProfile);
 router.patch('/updateData',errorHandler,updateProfile)
+router.patch('/update' ,[upload.fields([{ name: 'profilePicture', maxCount: 1 }]),errorHandler], errorHandler, updateUserProfile )
 router.get('/checkUser',errorHandler,getProfile)
 router.post('/buyProIncome',errorHandler,buyProIncome);
 router.patch('/updateProIncome',errorHandler,updateProIncome);
