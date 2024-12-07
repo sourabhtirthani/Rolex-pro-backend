@@ -4,10 +4,17 @@ import users from "../model/User.js";
 import  TreeNode  from "../model/TreeNode.js"; 
 import selfIncome from "../model/selfIncome.js";
 import dotenv from 'dotenv'
+import cloudinary from 'cloudinary'
+import fs from 'fs'
 dotenv.config();
 // Admin addresses as fallback
 const ADMIN_ADDRESSES = [process.env.ADMIN_ADDRESS, process.env.ADMIN_ADDRESS, process.env.ADMIN_ADDRESS];
-
+// Configure Cloudinary
+cloudinary.config({
+    cloud_name: 'da1cfszsz',  // Replace with your Cloudinary cloud name
+    api_key: '415511321991927',       // Replace with your Cloudinary API key
+    api_secret: 'ZkJ61icZGJfvH1g3WwF0xKZymxY', // Replace with your Cloudinary API secret
+  });
 export const createProfile = async (req, res)=>{
     try{
         const {address , referBy} = req.body;
@@ -122,11 +129,12 @@ export const updateUserProfile = async(req, res)=>{
         if(!existingUser){
             return res.status(400).json({message : "No such user found"})
         }
-        // const profilePicture =  req.files?.profilePicture ? req.files.profilePicture[0].filename : existingUser.profilePicture;
+         const profilePicture =  req.files?.profilePicture ? req.files.profilePicture[0].filename : existingUser.profilePicture;
         const updateObject = {};
         if (name) updateObject.name = name;
+        console.log("req.files.profilePicture",req.files.profilePicture);
         if (req.files && req.files.profilePicture) {
-            updateObject.profilePicture = req.files.profilePicture[0].filename;        // adds the profile picture in the object
+            updateObject.profilePicture = await uploadFileToCloudinary(req.files.profilePicture[0].path)        // adds the profile picture in the object
         }
 
         const updatedUser = await users.findOneAndUpdate(
@@ -140,6 +148,7 @@ export const updateUserProfile = async(req, res)=>{
         return res.status(200).json({ message: "Profile updated successfully"});
 
     }catch(error){
+        console.log(error);
         console.log(`error in updat profile function : ${error.message}`)
         return res.status(500).json({error : "Internal Server error"})
     }
@@ -553,3 +562,24 @@ const fetchTeam = async (userId) => {
         throw error;
     }
 };
+
+// Function to upload a file to Cloudinary
+const uploadFileToCloudinary = async (filePath) => {
+    try {
+      const result = await cloudinary.uploader.upload(filePath, { folder: 'rolex-pro' });
+  
+      // Delete the local file after upload
+      fs.unlinkSync(filePath);
+  
+      return result.secure_url;
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+  
+      // Delete the local file even if upload fails
+      fs.unlinkSync(filePath);
+  
+      // Throw the error to handle it in the calling function
+      throw new Error('Cloudinary upload failed');
+    }
+  };
+  
