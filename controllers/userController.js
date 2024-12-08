@@ -53,68 +53,68 @@ export const createProfile = async (req, res)=>{
 
 export const updateProfile=async(req,res)=>{
     try{
-        const {address ,referBy ,referPaymentAddress,referPaymentAmount, transactionHash ,uplineAddresses,uplineAddressesAmount} = req.body;
-        const existsRefer = await users.findOne({address:referBy});
-        const isExists = await users.findOne({address});
-        const existsReferPaymentAddress = await users.findOne({address:referBy});
+        // const {address ,referBy ,referPaymentAddress,referPaymentAmount, transactionHash ,uplineAddresses,uplineAddressesAmount} = req.body;
+        // const existsRefer = await users.findOne({address:referBy});
+        // const isExists = await users.findOne({address});
+        // const existsReferPaymentAddress = await users.findOne({address:referBy});
 
-        if(!existsRefer){
-            return res.status(200).json({message : "Refer Address Not Exits"})
-        }
-        if(isExists){
-            return res.status(200).json({message : " Address Already Exits"})
-        }
-        const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
-        if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-        const userId = Math.floor(Math.random()*1000000);
-        let parentAddress=await addUserToTree(address,3)
-        await users.findOneAndUpdate(
-            { address: referBy },
-            { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
-            { new: true }
-            );
-        
-        await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
-
-        await users.create({
-            address,
-            referBy : referBy,
-            parentAddress,
-            userId,
-            name:`Rolex_${userId}`
-        });
-
-        // await incomeTransactions.create({
-        //     fromUserId:userId,
-        //     toUserId:existsReferPaymentAddress.userId,
-        //     fromAddress:address,
-        //     toAddress:referPaymentAddress,
-        //     incomeType:"Referral income",
-        //     amount:referPaymentAmount,
-        //     transactionHash:transactionHash
-        // })
-        // await incomeTransactions.create({
-        //     fromUserId:userId,
-        //     toUserId:1,
-        //     fromAddress:address,
-        //     toAddress:process.env.DAILY_ROYALTIES,
-        //     incomeType:"Royalty income",
-        //     amount:0.6,
-        //     transactionHash:transactionHash
-        // })
-        // const updateDataForUser={
-        //     transactionHash,
-        //     isActive:true
+        // if(!existsRefer){
+        //     return res.status(200).json({message : "Refer Address Not Exits"})
         // }
-        // await users.updateOne({address},{$set:updateDataForUser});
+        // if(isExists){
+        //     return res.status(200).json({message : " Address Already Exits"})
+        // }
+        // const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
+        // if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
+        // const userId = Math.floor(Math.random()*1000000);
+        // let parentAddress=await addUserToTree(address,3)
+        // await users.findOneAndUpdate(
+        //     { address: referBy },
+        //     { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
+        //     { new: true }
+        //     );
+        
+        // await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
 
-        let uplineAddressesData;
-        let i=0;
-        while( i< uplineAddresses.length){            
-             uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
-             await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
-            i++;
-        }
+        // await users.create({
+        //     address,
+        //     referBy : referBy,
+        //     parentAddress,
+        //     userId,
+        //     name:`Rolex_${userId}`
+        // });
+
+        // // await incomeTransactions.create({
+        // //     fromUserId:userId,
+        // //     toUserId:existsReferPaymentAddress.userId,
+        // //     fromAddress:address,
+        // //     toAddress:referPaymentAddress,
+        // //     incomeType:"Referral income",
+        // //     amount:referPaymentAmount,
+        // //     transactionHash:transactionHash
+        // // })
+        // // await incomeTransactions.create({
+        // //     fromUserId:userId,
+        // //     toUserId:1,
+        // //     fromAddress:address,
+        // //     toAddress:process.env.DAILY_ROYALTIES,
+        // //     incomeType:"Royalty income",
+        // //     amount:0.6,
+        // //     transactionHash:transactionHash
+        // // })
+        // // const updateDataForUser={
+        // //     transactionHash,
+        // //     isActive:true
+        // // }
+        // // await users.updateOne({address},{$set:updateDataForUser});
+
+        // let uplineAddressesData;
+        // let i=0;
+        // while( i< uplineAddresses.length){            
+        //      uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
+        //      await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
+        //     i++;
+        // }
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
@@ -187,7 +187,6 @@ export const previewProfile = async(req, res)=>{
 
 export const buyProIncome = async (req, res)=>{
     try{
-        console.log("helo")
         const {address , type} = req.body;
         if(!address){
             return res.status(400).json({message : "Please provide all the details"});
