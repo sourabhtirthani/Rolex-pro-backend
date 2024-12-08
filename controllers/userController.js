@@ -55,10 +55,14 @@ export const updateProfile=async(req,res)=>{
     try{
         const {address ,referBy ,referPaymentAddress,referPaymentAmount, transactionHash ,uplineAddresses,uplineAddressesAmount} = req.body;
         const existsRefer = await users.findOne({address:referBy});
+        const isExists = await users.findOne({address});
         const existsReferPaymentAddress = await users.findOne({address:referBy});
 
         if(!existsRefer){
             return res.status(200).json({message : "Refer Address Not Exits"})
+        }
+        if(isExists){
+            return res.status(200).json({message : " Address Already Exits"})
         }
         const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
