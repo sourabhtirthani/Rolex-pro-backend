@@ -422,6 +422,7 @@ export const getProfile = async(req, res)=>{
         const exists = await users.findOne({ address: address });
         console.log("exists",exists);
         const treeType=await getUserTreeTypes(address);
+        console.log("treeType",treeType);
         const selfIncomeType=await getUserSelfIncome(address);
         let extraData={
             propowerincome:treeType.count,
@@ -610,8 +611,9 @@ async function fetchParentForTree( fundAmount) {
 async function getUserTreeTypes(userAddress) {
     try {
         // Find distinct treeType values for the given user address
-        const count = await ProTreeNode.countDocuments({ userAddress });
+        const count = await ProTreeNode.countDocuments({ address:userAddress });
         // Return the count and the list of tree types
+        
         return {
             count: count,
         };
