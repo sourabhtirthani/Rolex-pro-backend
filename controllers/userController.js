@@ -6,6 +6,7 @@ import selfIncome from "../model/selfIncome.js";
 import dotenv from 'dotenv'
 import cloudinary from 'cloudinary'
 import fs from 'fs'
+import ProTreeNode from "../model/GlobalTreeNode.js";
 dotenv.config();
 // Admin addresses as fallback
 const ADMIN_ADDRESSES = [process.env.ADMIN_ADDRESS, process.env.ADMIN_ADDRESS, process.env.ADMIN_ADDRESS];
@@ -18,8 +19,18 @@ cloudinary.config({
 export const createProfile = async (req, res)=>{
     try{
         const {address , referBy} = req.body;
-        let referPaymentAddress;
-        if(!address  || !referBy){
+        let referPaymentAddress,dailyRoyaltyAmount,userAmount,monthlyAmount;
+        const countingArray = [
+            5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
+            21, 22, 23, 24,  26, 27, 28, 29, 31, 32, 33, 34, 
+            36, 37, 38, 39,  41, 42, 43, 44,  46, 47, 48, 49, 
+            51, 52, 53, 54,  56, 57, 58, 59,  61, 62, 63, 64, 
+            66, 67, 68, 69,  71, 72, 73, 74,  76, 77, 78, 79, 
+            81, 82, 83, 84,  86, 87, 88, 89,  91, 92, 93, 94, 
+            96, 97, 98, 99
+          ];
+          let amount=3
+        if(!address  || !referBy || !amount){
             return res.status(400).json({message : "Please provide all the details"});
         }
         const exists = await users.findOne({address});
@@ -30,19 +41,39 @@ export const createProfile = async (req, res)=>{
         if(exists){
             return res.status(200).json({message : "User already exists"})
         }
-        if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2){
+        if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
             referPaymentAddress=isReferExits.referBy;
+            userAmount=Number(amount)*Number(0.9);
+            dailyRoyaltyAmount=amount-userAmount;
         }
-        else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3) referPaymentAddress=referBy;
+        else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3){ 
+            referPaymentAddress=referBy
+            userAmount=Number(amount)*Number(0.9);
+            dailyRoyaltyAmount=amount-userAmount;
+        }
+        else if(countingArray.includes(isReferExits.referTo.length)){
+            referPaymentAddress=referBy
+            userAmount=Number(amount)*Number(0.75);
+            monthlyAmount=amount-userAmount;
+            dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
+            userAmount=(userAmount*(0.9));
+        }else if ([10, 15, 20, 25,30,35,40,45,55,60,65,70,75,80,85,90,95,100].includes(isReferExits.referTo.length)){
+            referPaymentAddress=isReferExits.referBy;
+            userAmount=Number(amount)*Number(0.75);
+            monthlyAmount=amount-userAmount;
+            dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
+            userAmount=(userAmount*(0.9));
+        }
+
         if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
         const uplineAddresses=await fetchUplineAddresses(3);
         const data={
             referPaymentAddress,
-            referPaymentAmount:2.7,
+            referPaymentAmount:userAmount,
             uplineAddresses,
             uplineAmount:[0.81,0.54,1.35],
             royalyAddress:process.env.DAILY_ROYALTIES,
-            royalyAmount:.60
+            royalyAmount:dailyRoyaltyAmount
         }
         return res.json({ success:true,status:200,data:data,message:"All good"})
     }catch(error){
@@ -187,17 +218,67 @@ export const previewProfile = async(req, res)=>{
 
 export const buyProIncome = async (req, res)=>{
     try{
-        const {address , type} = req.body;
-        if(!address){
-            return res.status(400).json({message : "Please provide all the details"});
-        }
-        const exists = await users.findOne({address});
-        if(!exists){
-            return res.status(200).json({message : "User doesnt exists"})
-        }
-        const uplineAddress=await fetchParentForTree(type);
-        console.log("uplineAddress",uplineAddress);
-        return res.json({ success:true,status:200,address:uplineAddress,royalyAddress:process.env.DAILY_ROYALTIES,message:"All good"})
+            const {address , referBy,amount} = req.body;
+            let referPaymentAddress,dailyRoyaltyAmount,userAmount,monthlyAmount;
+            const countingArray = [
+                5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
+                21, 22, 23, 24,  26, 27, 28, 29, 31, 32, 33, 34, 
+                36, 37, 38, 39,  41, 42, 43, 44,  46, 47, 48, 49, 
+                51, 52, 53, 54,  56, 57, 58, 59,  61, 62, 63, 64, 
+                66, 67, 68, 69,  71, 72, 73, 74,  76, 77, 78, 79, 
+                81, 82, 83, 84,  86, 87, 88, 89,  91, 92, 93, 94, 
+                96, 97, 98, 99
+              ];
+            if(!address  || !referBy || !amount){
+                return res.status(400).json({message : "Please provide all the details"});
+            }
+            const exists = await users.findOne({address});
+            const isReferExits =await users.findOne({address:referBy});
+            const existingNode = await ProTreeNode.findOne({ address, amount });
+        
+            if(!isReferExits){
+                return res.status(400).json({message : "Reffer Address Not found"})
+            }
+            if(exists){
+                return res.status(200).json({message : "User already exists"})
+            }
+            if (existingNode) {
+                return res.status(200).json({message : "User already Bought this package"})
+            }
+            if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
+                referPaymentAddress=isReferExits.referBy;
+                userAmount=Number(amount)*Number(0.9);
+                dailyRoyaltyAmount=amount-userAmount;
+            }
+            else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3){ 
+                referPaymentAddress=referBy
+                userAmount=Number(amount)*Number(0.9);
+                dailyRoyaltyAmount=amount-userAmount;
+            }
+            else if(countingArray.includes(isReferExits.referTo.length)){
+                referPaymentAddress=referBy
+                userAmount=Number(amount)*Number(0.75);
+                monthlyAmount=amount-userAmount;
+                dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
+                userAmount=(userAmount*(0.9));
+            }else if ([10, 15, 20, 25,30,35,40,45,55,60,65,70,75,80,85,90,95,100].includes(isReferExits.referTo.length)){
+                referPaymentAddress=isReferExits.referBy;
+                userAmount=Number(amount)*Number(0.75);
+                monthlyAmount=amount-userAmount;
+                dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
+                userAmount=(userAmount*(0.9));
+            }
+            const data={
+                dailyRoyaltyAddress:process.env.DAILY_ROYALTIES,
+                paymentAddress:referPaymentAddress,
+                monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
+                dailyRoyaltyAmount,
+                userAmount,
+                monthlyAmount
+            }
+            if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
+            return res.json({ success:true,status:200,data:data,message:"All good"})
+        
     }catch(error){
         console.log(`error in create profile : ${error}`);
         return res.json({success:false,status:500,error : "Internal Server error"})
@@ -205,19 +286,17 @@ export const buyProIncome = async (req, res)=>{
 }
 export const updateProIncome=async(req,res)=>{
     try{
-        const {address, uplineAddress ,amount} = req.body;
+        const {address, uplineAddress ,amount,insertAmout} = req.body;
         
         const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-        const exists = await users.findOne({address:uplineAddress});
+        const exists = await users.findOne({address});
         if(!exists){
             return res.status(200).json({message : "User doesnt exists"})
         }
-        console.log("addUserToTree",amount);
-       await addUserToTree(address,amount)
-        console.log("amount",amount);
-        let newAmount=amount-(amount/10)
-        await users.updateOne({address:uplineAddress},{$set:{ powerMatrixIncome:((exists.powerMatrixIncome)+(newAmount))}})
+        const newNode = new ProTreeNode({ address, amount, userId:exists.userId });
+        await newNode.save();
+        await users.updateOne({address:uplineAddress},{$set:{ powerMatrixIncome:((exists.powerMatrixIncome)+(insertAmout))}})
 
         return res.json({ success:true,status:201,message:"user Buy Pro Income success fully"})
 
@@ -531,12 +610,10 @@ async function fetchParentForTree( fundAmount) {
 async function getUserTreeTypes(userAddress) {
     try {
         // Find distinct treeType values for the given user address
-        const treeTypes = await TreeNode.distinct("treeType", { address: userAddress });
-
+        const count = await ProTreeNode.countDocuments({ userAddress });
         // Return the count and the list of tree types
         return {
-            count: treeTypes.length,
-            treeTypes,
+            count: count,
         };
     } catch (error) {
         console.error("Error fetching tree types for user:", error);

@@ -1,12 +1,9 @@
 import express from 'express'
-// import activityRoutes from './routes/activityRoutes.js'
  import userRoutes from './routes/userRoutes.js'
-// import adminRoutes from './routes/adminRoutes.js';
 import { connectToDB } from './database/db.js';
 import cors from 'cors'
 const app = express();
 const PORT = process.env.PORT;
- import users from "./model/User.js";
 
 connectToDB();
 app.use(express.json());
