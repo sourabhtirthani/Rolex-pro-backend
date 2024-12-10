@@ -73,7 +73,9 @@ export const createProfile = async (req, res)=>{
             uplineAddresses,
             uplineAmount:[0.81,0.54,1.35],
             royalyAddress:process.env.DAILY_ROYALTIES,
-            royalyAmount:dailyRoyaltyAmount
+            royalyAmount:dailyRoyaltyAmount,
+            monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
+            monthlyAmount
         }
         return res.json({ success:true,status:200,data:data,message:"All good"})
     }catch(error){
@@ -84,68 +86,48 @@ export const createProfile = async (req, res)=>{
 
 export const updateProfile=async(req,res)=>{
     try{
-        // const {address ,referBy ,referPaymentAddress,referPaymentAmount, transactionHash ,uplineAddresses,uplineAddressesAmount} = req.body;
-        // const existsRefer = await users.findOne({address:referBy});
-        // const isExists = await users.findOne({address});
-        // const existsReferPaymentAddress = await users.findOne({address:referBy});
+        const {address ,referBy ,referPaymentAddress,referPaymentAmount, transactionHash ,uplineAddresses,uplineAddressesAmount} = req.body;
+        const existsRefer = await users.findOne({address:referBy});
+        const isExists = await users.findOne({address});
+        const existsReferPaymentAddress = await users.findOne({address:referBy});
 
-        // if(!existsRefer){
-        //     return res.status(200).json({message : "Refer Address Not Exits"})
-        // }
-        // if(isExists){
-        //     return res.status(200).json({message : " Address Already Exits"})
-        // }
-        // const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
-        // if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-        // const userId = Math.floor(Math.random()*1000000);
-        // let parentAddress=await addUserToTree(address,3)
-        // await users.findOneAndUpdate(
-        //     { address: referBy },
-        //     { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
-        //     { new: true }
-        //     );
+        if(!existsRefer){
+            return res.status(200).json({message : "Refer Address Not Exits"})
+        }
+        if(isExists){
+            return res.status(200).json({message : " Address Already Exits"})
+        }
+        const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
+        if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
+        const userId = Math.floor(Math.random()*1000000);
+        let parentAddress=await addUserToTree(address,3)
+        await users.findOneAndUpdate(
+            { address: referBy },
+            { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
+            { new: true }
+            );
         
-        // await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
+        await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
 
-        // await users.create({
-        //     address,
-        //     referBy : referBy,
-        //     parentAddress,
-        //     userId,
-        //     name:`Rolex_${userId}`
-        // });
+        await users.create({
+            address,
+            referBy : referBy,
+            parentAddress,
+            userId,
+            name:`Rolex_${userId}`
+        });
 
-        // // await incomeTransactions.create({
-        // //     fromUserId:userId,
-        // //     toUserId:existsReferPaymentAddress.userId,
-        // //     fromAddress:address,
-        // //     toAddress:referPaymentAddress,
-        // //     incomeType:"Referral income",
-        // //     amount:referPaymentAmount,
-        // //     transactionHash:transactionHash
-        // // })
-        // // await incomeTransactions.create({
-        // //     fromUserId:userId,
-        // //     toUserId:1,
-        // //     fromAddress:address,
-        // //     toAddress:process.env.DAILY_ROYALTIES,
-        // //     incomeType:"Royalty income",
-        // //     amount:0.6,
-        // //     transactionHash:transactionHash
-        // // })
-        // // const updateDataForUser={
-        // //     transactionHash,
-        // //     isActive:true
-        // // }
-        // // await users.updateOne({address},{$set:updateDataForUser});
 
-        // let uplineAddressesData;
-        // let i=0;
-        // while( i< uplineAddresses.length){            
-        //      uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
-        //      await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
-        //     i++;
-        // }
+        let uplineAddressesData;
+        let i=0;
+        while( i< uplineAddresses.length){            
+             uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
+             await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
+            i++;
+        }
+        await addUserToTree(address,3);
+        const newNode = new ProTreeNode({ address, amount:3, userId });
+        await newNode.save();
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
@@ -219,7 +201,7 @@ export const previewProfile = async(req, res)=>{
 export const buyProIncome = async (req, res)=>{
     try{
             const {address , referBy,amount} = req.body;
-            let referPaymentAddress,dailyRoyaltyAmount,userAmount,monthlyAmount;
+            let referPaymentAddress,dailyRoyaltyAmount,userAmount,monthlyAmount=0;
             const countingArray = [
                 5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
                 21, 22, 23, 24,  26, 27, 28, 29, 31, 32, 33, 34, 
