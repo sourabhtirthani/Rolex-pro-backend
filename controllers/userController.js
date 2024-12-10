@@ -420,24 +420,19 @@ export const getProfile = async(req, res)=>{
         }
         console.log("getProfile",address);
         const exists = await users.findOne({ address: address });
-        console.log("exists",exists);
         const treeType=await getUserTreeTypes(address);
-        console.log("treeType",treeType);
+        const globalTreeTypes=await getUserTreeTypeGlobal(address);
         const selfIncomeType=await getUserSelfIncome(address);
         let extraData={
             propowerincome:treeType.count,
             royalyAddress:process.env.DAILY_ROYALTIES,
             adminAddress:process.env.ADMIN_ADDRESS,
             selfIncome:selfIncomeType.count,
+            globalSlot:globalTreeTypes
         }
-        console.log("hi")
         if (!exists) {
-            console.log("hi")
-
             return res.status(400).json({ message: "No such user found" ,status:400});
         } else {
-            console.log("hi")
-
             const userRefferData=users.findOne({ address });
             return res.status(200).json({ userData: exists,otherData:extraData,data:userRefferData.userId,status:200})
         }
@@ -693,4 +688,20 @@ const uploadFileToCloudinary = async (filePath) => {
     }
 };
   
+async function getUserTreeTypeGlobal(userAddress) {
+    try {
+        // Find the tree node for the given user
+        const userTreeNode = await TreeNode.countDocuments({ address: userAddress });
+
+        if (!userTreeNode) {
+            throw new Error("User not found in any tree.");
+        }
+
+        return userTreeNode;
+    } catch (error) {
+        console.error(`Error fetching tree type for user: ${error.message}`);
+        return null;
+    }
+}
+
 
