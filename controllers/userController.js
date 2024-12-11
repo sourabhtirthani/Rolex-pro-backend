@@ -221,9 +221,7 @@ export const buyProIncome = async (req, res)=>{
             if(!isReferExits){
                 return res.status(400).json({message : "Reffer Address Not found"})
             }
-            if(exists){
-                return res.status(200).json({message : "User already exists"})
-            }
+            
             if (existingNode) {
                 return res.status(200).json({message : "User already Bought this package"})
             }
