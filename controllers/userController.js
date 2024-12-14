@@ -403,12 +403,14 @@ export const getProfile = async(req, res)=>{
         const treeType=await getUserTreeTypes(address);
         const globalTreeTypes=await getUserTreeTypeGlobal(address);
         const selfIncomeType=await getUserSelfIncome(address);
+        const totalNumberOfReferWhoJoinedToday=await getTodaysRefersCount(address);
         let extraData={
             propowerincome:treeType.count,
             royalyAddress:process.env.DAILY_ROYALTIES,
             adminAddress:process.env.ADMIN_ADDRESS,
             selfIncome:selfIncomeType.count,
-            globalSlot:globalTreeTypes
+            globalSlot:globalTreeTypes,
+            totalNumberOfReferWhoJoinedToday:totalNumberOfReferWhoJoinedToday.totalTodaysRefers
         }
         if (!exists) {
             return res.status(400).json({ message: "No such user found" ,status:400});
@@ -683,5 +685,81 @@ async function getUserTreeTypeGlobal(userAddress) {
         return null;
     }
 }
+
+
+export const getReferDetails=async(req,res)=> {
+    try {
+        const {address} = req.query;
+        // Find the user by their address
+        const user = await users.findOne({ address });
+
+        if (!user) {
+            return { error: 'User not found' };
+        }
+
+        // Fetch details of users in the referTo array
+        const referDetails = await users.find({ address: { $in: user.referTo } });
+        const formatDate = (date) => {
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(date).toLocaleDateString('en-US', options);
+        };
+        // Map the referDetails to the required format
+        const formattedReferDetails = referDetails.map(referUser => ({
+            userId: referUser.userId,
+            address: referUser.address,
+            joinTime: formatDate(referUser.join_time),
+            totalIncome: 
+                (referUser.powerMatrixIncome || 0) +
+                (referUser.globalMatrixIncome || 0) +
+                (referUser.selfIncome || 0),
+        }));
+        
+
+        // Return the formatted refer details
+        const data= {
+            userId: user.userId,
+            address: user.address,
+            referDetails: formattedReferDetails
+        }
+        return res.status(200).json({ data,status:200})
+ 
+    } catch (error) {
+        console.error('Error fetching refer details:', error);
+        return { error: 'An error occurred while fetching refer details' };
+    }
+}
+
+async function getTodaysRefersCount(userAddress) {
+    try {
+        // Get the start and end of today's date
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+
+        const endOfToday = new Date();
+        endOfToday.setHours(23, 59, 59, 999);
+
+        // Find the user by their address
+        const user = await users.findOne({ address: userAddress });
+
+        if (!user) {
+            return { error: 'User not found' };
+        }
+
+        // Count users in the referTo array who joined today
+        const todaysRefersCount = await users.countDocuments({
+            address: { $in: user.referTo }, // Only look at the referred users
+            join_time: { $gte: startOfToday, $lte: endOfToday } // Filter today's joins
+        });
+
+        // Return the count of today's referred members
+        return {
+            totalTodaysRefers: todaysRefersCount
+        };
+    } catch (error) {
+        console.error('Error fetching today\'s refer count:', error);
+        return { error: 'An error occurred while fetching today\'s refer count' };
+    }
+}
+
 
 

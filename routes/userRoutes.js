@@ -2,7 +2,7 @@ import express from 'express';
 import errorHandler from '../middlewares/errorHandler.js';
 import { upload } from '../middlewares/multer.js';
 
-import {    buyProIncome, createProfile, freeRegistration, getProfile, getSelfIncome, postselfIncome, previewProfile, updateProfile, updateProIncome, updateselfIncome, updateUserProfile} from '../controllers/userController.js';
+import  {    buyProIncome, createProfile, freeRegistration, getProfile, getSelfIncome, postselfIncome, previewProfile, updateProfile, updateProIncome, updateselfIncome, updateUserProfile,getReferDetails} from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -17,6 +17,7 @@ router.get('/selfIncome',errorHandler,getSelfIncome)
 router.post('/selfIncome',errorHandler,postselfIncome);
 router.patch('/selfIncome',errorHandler,updateselfIncome);
 router.get('/preview',errorHandler,previewProfile)
+router.get('/getReferDetails',errorHandler,getReferDetails);
 // package Router 
 
 export default router;  
