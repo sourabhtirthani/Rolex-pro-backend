@@ -73,7 +73,7 @@ export const createProfile = async (req, res)=>{
             uplineAddresses,
             uplineAmount:[0.81,0.54,1.35],
             royalyAddress:process.env.DAILY_ROYALTIES,
-            royalyAmount:dailyRoyaltyAmount,
+            royalyAmount:dailyRoyaltyAmount+Number(0.3),
             monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
             monthlyAmount
         }
@@ -126,7 +126,7 @@ export const updateProfile=async(req,res)=>{
             i++;
         }
         await addUserToTree(address,3);
-        const newNode = new ProTreeNode({ address, amount:3, userId });
+        const newNode = new ProTreeNode({ address, amount:3 });
         await newNode.save();
         return res.json({ success:true,status:201,message:"user joined"})
 
@@ -554,8 +554,8 @@ async function fetchUplineAddresses(treeType) {
     const uplineAddresses = [];
     let currentNode = parentNode;
     while (currentNode && uplineAddresses.length < 3) {
+        console.log("uplineAddresses inside loop",currentNode.address);
         uplineAddresses.push(currentNode.address);
-        console.log("uplineAddresses inside loop",uplineAddresses);
         currentNode = await TreeNode.findOne({ address: currentNode.parentAddress });
     }
 
