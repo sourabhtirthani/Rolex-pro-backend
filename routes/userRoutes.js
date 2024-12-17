@@ -2,7 +2,7 @@ import express from 'express';
 import errorHandler from '../middlewares/errorHandler.js';
 import { upload } from '../middlewares/multer.js';
 
-import  {    buyProIncome, createProfile, freeRegistration, getProfile, getSelfIncome, postselfIncome, previewProfile, updateProfile, updateProIncome, updateselfIncome, updateUserProfile,getReferDetails} from '../controllers/userController.js';
+import  {    buyProIncome, createProfile, freeRegistration, getProfile, getSelfIncome, postselfIncome, previewProfile, updateProfile, updateProIncome, updateselfIncome, updateUserProfile,getReferDetails, buyGlobalIncome, updateGloablIncome} from '../controllers/userController.js';
 
 const router = express.Router();
 
@@ -12,6 +12,8 @@ router.patch('/update' ,[upload.fields([{ name: 'profilePicture', maxCount: 1 }]
 router.get('/checkUser',errorHandler,getProfile)
 router.post('/buyProIncome',errorHandler,buyProIncome);
 router.patch('/updateProIncome',errorHandler,updateProIncome);
+router.post('/buyGlobalIncome',errorHandler,buyGlobalIncome);
+router.patch('/updateGlobalIncome',errorHandler,updateGloablIncome);
 router.post('/freeResistration',errorHandler,freeRegistration)
 router.get('/selfIncome',errorHandler,getSelfIncome)
 router.post('/selfIncome',errorHandler,postselfIncome);

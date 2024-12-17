@@ -126,8 +126,9 @@ export const updateProfile=async(req,res)=>{
             i++;
         }
         await addUserToTree(address,3);
-        const newNode = new ProTreeNode({ address, amount:3 });
-        await newNode.save();
+        console.log("")
+        await ProTreeNode.create({ address, amount:3 });
+        
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
@@ -297,9 +298,11 @@ export const buyGlobalIncome = async (req, res)=>{
         if(!exists){
             return res.status(200).json({message : "User doesnt exists"})
         }
-        const uplineAddress=await fetchParentForTree(type);
+        const uplineAddress=await fetchUplineAddresses(type);
         console.log("uplineAddress",uplineAddress);
-        return res.json({ success:true,status:200,address:uplineAddress,royalyAddress:process.env.DAILY_ROYALTIES,message:"All good"})
+       let amount=Number(type)- (Number(type)*0.1);
+       let uplineAmount=[Number(amount)*Number(0.3),Number(amount)*Number(0.2),Number(amount)*Number(0.5)]
+        return res.json({ success:true,status:200,address:uplineAddress,uplineAmount,royalyAddress:process.env.DAILY_ROYALTIES,royaltyAmount: (Number(type)*0.1).toFixed(2),message:"All good"})
     }catch(error){
         console.log(`error in create profile : ${error}`);
         return res.json({success:false,status:500,error : "Internal Server error"})
@@ -307,19 +310,21 @@ export const buyGlobalIncome = async (req, res)=>{
 }
 export const updateGloablIncome=async(req,res)=>{
     try{
-        const {address, uplineAddress ,amount} = req.body;
+        const {address, uplineAddresses ,amount,uplineAddressesAmount} = req.body;
         
-        const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
-        if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-        const exists = await users.findOne({address:uplineAddress});
+        const exists = await users.findOne({address});
         if(!exists){
             return res.status(200).json({message : "User doesnt exists"})
         }
-       await addUserToTree(address,amount)
-        console.log("amount",amount);
-        let newAmount=amount-(amount/10)
-        await users.updateOne({address:uplineAddress},{$set:{ powerMatrixIncome:((exists.powerMatrixIncome)+(newAmount))}})
-
+        let uplineAddressesData;
+        let i=0;
+        while( i< uplineAddresses.length){            
+             uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
+             await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
+            i++;
+        }
+        console.log("updateGlobalIncome",amount);
+       await addUserToTree(address,amount);
         return res.json({ success:true,status:201,message:"user Buy Pro Income success fully"})
 
     }catch(error){
@@ -534,6 +539,7 @@ async function addUserToTree(userAddress,treeType) {
         address:userAddress,
         parentAddress: parentNode.address,
         level: parentNode.level + 1,
+        treeType: treeType,
     });
 
     return parentNode.address;
