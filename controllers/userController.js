@@ -516,6 +516,30 @@ export const updateselfIncome = async(req, res)=>{
     }
 }
 
+export const fetchAllTeamInfoWithPagination=async(req,res)=>{
+    const { address } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    try {
+        if (!address) {
+            return res.status(400).json({ error: 'Address is required' });
+        }
+
+        const { totalTeamSize, team } = await getTeamWithPagination(address, page, limit);
+
+        res.json({
+            totalTeamSize,
+            currentPage: page,
+            totalPages: Math.ceil(totalTeamSize / limit),
+            team,
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'An error occurred while fetching the team data' });
+    }
+}
+
 async function addUserToTree(userAddress,treeType) {
     // Find the next available parent node with less than 4 children
     const parentNode = await TreeNode.findOne({
@@ -814,6 +838,34 @@ const getTeamMembersJoinedToday = async (address) => {
     });
 
     return todayTeam;
+};
+
+const getTeamWithPagination = async (address, page = 1, limit = 10) => {
+    const skip = (page - 1) * limit;
+
+    const pipeline = [
+        {
+            $match: { address: address }, // Start with the user whose team we want to calculate
+        },
+        {
+            $graphLookup: {
+                from: "users", // Collection name
+                startWith: "$referTo",
+                connectFromField: "referTo",
+                connectToField: "address",
+                as: "team",
+            },
+        },
+        {
+            $project: {
+                totalTeamSize: { $size: "$team" }, // Count the size of the "team" array
+                team: { $slice: ["$team", skip, limit] }, // Apply pagination
+            },
+        },
+    ];
+
+    const result = await users.aggregate(pipeline).exec();
+    return result[0] || { totalTeamSize: 0, team: [] };
 };
 
 
