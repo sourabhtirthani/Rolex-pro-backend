@@ -409,13 +409,18 @@ export const getProfile = async(req, res)=>{
         const globalTreeTypes=await getUserTreeTypeGlobal(address);
         const selfIncomeType=await getUserSelfIncome(address);
         const totalNumberOfReferWhoJoinedToday=await getTodaysRefersCount(address);
+        const fetchTeam=await getTotalTeamSize(address);
+        const userWhoJoinedToday=await getTeamMembersJoinedToday(address);
+
         let extraData={
             propowerincome:treeType.count,
             royalyAddress:process.env.DAILY_ROYALTIES,
             adminAddress:process.env.ADMIN_ADDRESS,
             selfIncome:selfIncomeType.count,
             globalSlot:globalTreeTypes,
-            totalNumberOfReferWhoJoinedToday:totalNumberOfReferWhoJoinedToday.totalTodaysRefers
+            totalNumberOfReferWhoJoinedToday:totalNumberOfReferWhoJoinedToday.totalTodaysRefers,
+            userWhoJoinedToday:userWhoJoinedToday.length,
+            fetchTeam,
         }
         if (!exists) {
             return res.status(400).json({ message: "No such user found" ,status:400});
@@ -766,6 +771,50 @@ async function getTodaysRefersCount(userAddress) {
         return { error: 'An error occurred while fetching today\'s refer count' };
     }
 }
+
+// Function to calculate total team size
+const getTotalTeamSize = async (address) => {
+    const pipeline = [
+        {
+            $match: { address: address }, // Start with the user whose team we want to calculate
+        },
+        {
+            $graphLookup: {
+                from: "users", // Collection name
+                startWith: "$referTo",
+                connectFromField: "referTo",
+                connectToField: "address",
+                as: "team",
+            },
+        },
+        {
+            $project: {
+                totalTeamSize: { $size: "$team" }, // Count the size of the "team" array
+            },
+        },
+    ];
+
+    const result = await users.aggregate(pipeline).exec();
+    return result[0]?.totalTeamSize || 0;
+};
+
+
+// Function to get team members who joined today
+const getTeamMembersJoinedToday = async (address) => {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0); // Set time to 00:00:00.000
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999); // Set time to 23:59:59.999
+
+    // Query the database to find team members referred by `address` who joined today
+    const todayTeam = await users.find({
+        referBy: address,
+        join_time: { $gte: startOfDay, $lte: endOfDay },
+    });
+
+    return todayTeam;
+};
 
 
 
