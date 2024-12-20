@@ -708,13 +708,38 @@ const uploadFileToCloudinary = async (filePath) => {
 async function getUserTreeTypeGlobal(userAddress) {
     try {
         // Find the tree node for the given user
-        const userTreeNode = await TreeNode.countDocuments({ address: userAddress });
+        const userTreeNode =   await TreeNode.aggregate([
+            { $match: { address: userAddress } }, // Filter by user address
+            {
+                $group: {
+                    _id: { address: "$address", treeType: "$treeType" }, // Group by address and treeType
+                    parentAddress: { $first: "$parentAddress" }, // Include additional fields as needed
+                    children: { $first: "$children" },
+                    level: { $first: "$level" },
+                    createdAt: { $first: "$createdAt" },
+                    updatedAt: { $first: "$updatedAt" }
+                }
+            },
+            {
+                $project: {
+                    _id: 0, // Remove the _id field from the results
+                    address: "$_id.address",
+                    treeType: "$_id.treeType",
+                    parentAddress: 1,
+                    children: 1,
+                    level: 1,
+                    createdAt: 1,
+                    updatedAt: 1
+                }
+            }
+        ]);
 
+        console.log("userTreeNode",userTreeNode.length);
         if (!userTreeNode) {
             throw new Error("User not found in any tree.");
         }
 
-        return userTreeNode;
+        return userTreeNode.length;
     } catch (error) {
         console.error(`Error fetching tree type for user: ${error.message}`);
         return null;
