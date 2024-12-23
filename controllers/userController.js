@@ -21,7 +21,7 @@ export const createProfile = async (req, res)=>{
         const {address , referBy} = req.body;
         let referPaymentAddress,dailyRoyaltyAmount=0,userAmount=0,monthlyAmount=0;
         const countingArray = [
-            5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
+            4,5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
             21, 22, 23, 24,  26, 27, 28, 29, 31, 32, 33, 34, 
             36, 37, 38, 39,  41, 42, 43, 44,  46, 47, 48, 49, 
             51, 52, 53, 54,  56, 57, 58, 59,  61, 62, 63, 64, 
@@ -42,29 +42,36 @@ export const createProfile = async (req, res)=>{
             return res.status(200).json({message : "User already exists"})
         }
         if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
+            
             referPaymentAddress=isReferExits.referBy;
             userAmount=Number(amount)*Number(0.9);
             dailyRoyaltyAmount=amount-userAmount;
         }
         else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3){ 
+            console.log("2")
+
             referPaymentAddress=referBy
             userAmount=Number(amount)*Number(0.9);
             dailyRoyaltyAmount=amount-userAmount;
         }
         else if(countingArray.includes(isReferExits.referTo.length)){
+            console.log("3")
+
             referPaymentAddress=referBy
             userAmount=Number(amount)*Number(0.75);
             monthlyAmount=amount-userAmount;
             dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
             userAmount=(userAmount*(0.9));
         }else if ([10, 15, 20, 25,30,35,40,45,55,60,65,70,75,80,85,90,95,100].includes(isReferExits.referTo.length)){
+            console.log("4")
+
             referPaymentAddress=isReferExits.referBy;
             userAmount=Number(amount)*Number(0.75);
             monthlyAmount=amount-userAmount;
             dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
             userAmount=(userAmount*(0.9));
         }
-
+        console.log("isReferExits.referTo.length",isReferExits.referTo.length);
         if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
         const uplineAddresses=await fetchUplineAddresses(3);
         const data={
@@ -126,9 +133,7 @@ export const updateProfile=async(req,res)=>{
             i++;
         }
         await addUserToTree(address,3);
-        console.log("")
-        await ProTreeNode.create({ address, amount:3 });
-        
+       let proPower= await ProTreeNode.create({ address, amount:3 });
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
@@ -410,8 +415,8 @@ export const getProfile = async(req, res)=>{
         const selfIncomeType=await getUserSelfIncome(address);
         const totalNumberOfReferWhoJoinedToday=await getTodaysRefersCount(address);
         const fetchTeam=await getTotalTeamSize(address);
-        const userWhoJoinedToday=await getTeamMembersJoinedToday(address);
-
+        const userWhoJoinedToday=await getTeamSizeToday(exists.userId);
+        console.log("userWhoJoinedToday",userWhoJoinedToday);
         let extraData={
             propowerincome:treeType.count,
             royalyAddress:process.env.DAILY_ROYALTIES,
@@ -893,5 +898,72 @@ const getTeamWithPagination = async (address, page = 1, limit = 10) => {
     return result[0] || { totalTeamSize: 0, team: [] };
 };
 
+const getTodayBounds = () => {
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const endOfToday = new Date();
+    endOfToday.setHours(23, 59, 59, 999);
+    return { startOfToday, endOfToday };
+};
+
+// Recursive function to get the team size
+const getTeamSizeToday = async (userId) => {
+    try {
+        // Fetch the user's document
+        const user = await users.findOne({ userId });
+        if (!user) {
+            throw new Error("User not found");
+        }
+
+        // Bounds for today's date
+        const { startOfToday, endOfToday } = getTodayBounds();
+
+        // Initialize a queue with the user's referTo array
+        const queue = [...user.referTo];
+        let count = 0;
+
+        while (queue.length > 0) {
+            // Fetch the next batch of users from the queue
+            const addresses = queue.splice(0, queue.length);
+
+            // Fetch users who were referred by the current addresses and joined today
+            const referredUsers = await users.find({
+                address: { $in: addresses },
+                join_time: { $gte: startOfToday, $lt: endOfToday }
+            });
+
+            // Count users who joined today
+            count += referredUsers.length;
+
+            // Add the next level of users (their referTo arrays) to the queue
+            const nextLevelAddresses = referredUsers.flatMap((user) => user.referTo);
+            queue.push(...nextLevelAddresses);
+        }
+
+        return count;
+    } catch (error) {
+        console.error("Error fetching team size today:", error);
+        throw error;
+    }
+};
 
 
+
+export const fetchDistinctAddresses = async (req,res) => {
+    try {
+        // Fetch all distinct addresses
+        const distinctAddresses = await users.aggregate([
+            { $group: { _id: "$address" } },
+            { $sort: { _id: 1 } } // Sort by _id (address field)
+        ]);
+        const sortedAddresses = distinctAddresses.map(item => item._id);
+
+        // distinctAddresses.sort(); // Default sort is ascending (alphabetical for strings)
+        console.log("distinctAddresses",sortedAddresses.length);
+        return res.json({address:sortedAddresses});
+        
+    } catch (error) {
+        console.error("Error fetching distinct addresses:", error);
+        throw error;
+    }
+};
