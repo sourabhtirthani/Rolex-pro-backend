@@ -132,7 +132,7 @@ export const updateProfile=async(req,res)=>{
              await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
             i++;
         }
-        await addUserToTree(address,3);
+       
        let proPower= await ProTreeNode.create({ address, amount:3 });
         return res.json({ success:true,status:201,message:"user joined"})
 
@@ -424,7 +424,7 @@ export const getProfile = async(req, res)=>{
             selfIncome:selfIncomeType.count,
             globalSlot:globalTreeTypes,
             totalNumberOfReferWhoJoinedToday:totalNumberOfReferWhoJoinedToday.totalTodaysRefers,
-            userWhoJoinedToday:userWhoJoinedToday.length,
+            userWhoJoinedToday:userWhoJoinedToday,
             fetchTeam,
         }
         if (!exists) {
