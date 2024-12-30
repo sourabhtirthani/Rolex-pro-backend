@@ -16,7 +16,7 @@ cloudinary.config({
     api_key: '415511321991927',       // Replace with your Cloudinary API key
     api_secret: 'ZkJ61icZGJfvH1g3WwF0xKZymxY', // Replace with your Cloudinary API secret
   });
-export const createProfile = async (req, res)=>{
+  export const createProfile = async (req, res)=>{
     try{
         const {address , referBy} = req.body;
         let referPaymentAddress,dailyRoyaltyAmount=0,userAmount=0,monthlyAmount=0;
@@ -43,7 +43,7 @@ export const createProfile = async (req, res)=>{
         }
         if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
             
-            referPaymentAddress=isReferExits.referBy;
+            referPaymentAddress=isReferExits.parentAddress;
             userAmount=Number(amount)*Number(0.9);
             dailyRoyaltyAmount=amount-userAmount;
         }
@@ -65,7 +65,7 @@ export const createProfile = async (req, res)=>{
         }else if ([10, 15, 20, 25,30,35,40,45,55,60,65,70,75,80,85,90,95,100].includes(isReferExits.referTo.length)){
             console.log("4")
 
-            referPaymentAddress=isReferExits.referBy;
+            referPaymentAddress=isReferExits.parentAddress;
             userAmount=Number(amount)*Number(0.75);
             monthlyAmount=amount-userAmount;
             dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
@@ -80,7 +80,7 @@ export const createProfile = async (req, res)=>{
             uplineAddresses,
             uplineAmount:[0.81,0.54,1.35],
             royalyAddress:process.env.DAILY_ROYALTIES,
-            royalyAmount:dailyRoyaltyAmount+Number(0.3),
+            royalyAmount:dailyRoyaltyAmount,
             monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
             monthlyAmount
         }
@@ -115,11 +115,15 @@ export const updateProfile=async(req,res)=>{
             );
         
         await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
-
+        await users.findOneAndUpdate(
+            { address: referPaymentAddress },
+            { $push: { myTeam: address } },        //updates the referto array and adds the new user that he referred to his array
+            { new: true }
+            );
         await users.create({
             address,
             referBy : referBy,
-            parentAddress,
+            parentAddress:referPaymentAddress,
             userId,
             name:`Rolex_${userId}`
         });
@@ -414,7 +418,7 @@ export const getProfile = async(req, res)=>{
         const globalTreeTypes=await getUserTreeTypeGlobal(address);
         const selfIncomeType=await getUserSelfIncome(address);
         const totalNumberOfReferWhoJoinedToday=await getTodaysRefersCount(address);
-        const fetchTeam=await getTotalTeamSize(address);
+        const fetchTeam=exists.myTeam.length;
         const userWhoJoinedToday=await getTeamSizeToday(exists.userId);
         console.log("userWhoJoinedToday",userWhoJoinedToday);
         let extraData={
