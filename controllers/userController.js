@@ -156,7 +156,7 @@ export const updateProfile=async(req,res)=>{
             i++;
         }
        
-     //  let proPower= await ProTreeNode.create({ address, amount:3 });
+       let proPower= await ProTreeNode.create({ address, amount:3 });
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
