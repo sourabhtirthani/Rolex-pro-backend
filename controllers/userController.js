@@ -505,43 +505,66 @@ export const postselfIncome = async(req, res)=>{
 export const getSelfIncome=async(req,res)=>{
     try{
         const eligibleInvestments = await selfIncome.find({
-            daysRewarded: { $lt: 15 }, // Check if the investment is within the reward duration
+            daysRewarded: { $lt: 15 }, // Not fully rewarded yet
         });
-        const rewardPercentage = 10; // 10% daily reward
+
+        if (eligibleInvestments.length === 0) {
+            console.log("No eligible investments for rewards.");
+            return { message: "No eligible investments for rewards." };
+        }
+
+        // Arrays to hold data for token distribution
         const userAddresses = [];
         const rewardAmounts = [];
-        let royaltyAmount=0;
+        const rewardPercentage=10;
+        let totalDeducted=0;
         for (const investment of eligibleInvestments) {
-            const daysElapsed = Math.floor((Date.now() - investment.investmentDate.getTime()) / (1000 * 60 * 60 * 24));
-            const daysToReward = Math.min(daysElapsed - investment.daysRewarded, 15 - investment.daysRewarded);
-            if (daysToReward > 0) {
-                let rewardAmount = (investment.amount * rewardPercentage * daysToReward) / 100;
-                rewardAmount=rewardAmount-(rewardAmount/10)
-                royaltyAmount+=Number+5((rewardAmount/10))
-                // Add to arrays
+            // Determine how many days to reward
+            const remainingDays = 15 - investment.daysRewarded;
+
+            if (Number(remainingDays) > 0) {
+                // Calculate total reward amount for remaining days
+                const rewardAmount = (investment.amount * rewardPercentage) / 100;
+                // Add user address and reward amount to arrays
+                 // Deduct 10% and calculate the net reward
+                const deduction = rewardAmount * 0.1;
+                const netReward = rewardAmount - deduction;
+
+                // Accumulate the deducted amount
+                totalDeducted += deduction;
                 userAddresses.push(investment.address);
-                rewardAmounts.push((rewardAmount*10**18).toString());
-    
+                rewardAmounts.push((netReward * 10 ** 18).toString());
+
                 // Update rewarded days in DB
-                investment.daysRewarded += daysToReward;
-                await investment.save();
+               // investment.daysRewarded += remainingDays; // Reward all remaining days at once
+               // await investment.save();
             }
         }
-        console.log("")
-        return res.status(200).json({ data:  { userAddresses, rewardAmounts,royaltyAmount },status:200})
+
+        // Return the data for token transfer
+        // console.log("Rewards distribution data:", { userAddresses, rewardAmounts });
+        totalDeducted=(totalDeducted * 10 ** 18).toString()
+        return res.status(200).json({ data:  { userAddresses, rewardAmounts,totalDeducted },status:200})
 
     }catch(error){
-
+        console.log("error",error);
     }
 }
 
 export const updateselfIncome = async(req, res)=>{
     try{
-        const {addresses} = req.body;
+        const {addresses,amount} = req.body;
         await selfIncome.updateMany(
             { addresses: { $in: addresses }, daysRewarded: { $lt: 15 } },
             { $inc: { daysRewarded: 1 } } // Increment rewarded days by 1
         );
+        let uplineAddressesData;
+        let i=0;
+        while( i< addresses.length){            
+             uplineAddressesData=await users.findOne({address:addresses[i]})
+             await users.updateOne({address:addresses[i]},{$set:{ selfIncome:((uplineAddressesData.selfIncome)+(amount[i]))}})
+            i++;
+        }
         return res.status(200).json({message:"User rewards distributed  successfully",status:201})
     }catch(error){
         console.log(`error in self income post : ${error.message}`)
