@@ -17,7 +17,7 @@ router.post('/updateGlobalIncome',errorHandler,updateGloablIncome);
 router.post('/freeResistration',errorHandler,freeRegistration)
 router.get('/selfIncome',errorHandler,getSelfIncome)
 router.post('/selfIncome',errorHandler,postselfIncome);
-router.post('/selfIncome',errorHandler,updateselfIncome);
+router.post('/selfIncomeUpdate',errorHandler,updateselfIncome);
 router.get('/preview',errorHandler,previewProfile)
 router.get('/getReferDetails',errorHandler,getReferDetails);
 router.get('/fetchTeamInfo',errorHandler,fetchAllTeamInfoWithPagination)
