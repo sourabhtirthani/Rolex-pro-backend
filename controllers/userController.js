@@ -97,6 +97,7 @@ export const updateProfile=async(req,res)=>{
         const existsRefer = await users.findOne({address:referBy});
         const isExists = await users.findOne({address});
         const existsReferPaymentAddress = await users.findOne({address:referBy});
+        const existsReferPaymentAddress1 = await users.findOne({address:referPaymentAddress});
 
         if(!existsRefer){
             return res.status(200).json({message : "Refer Address Not Exits"})
@@ -106,8 +107,8 @@ export const updateProfile=async(req,res)=>{
         }
         const totalUsers = await users.find({}).limit(1).sort({createdAt:-1});    
         if(!totalUsers) return res.status(500).json({error:"Internel Server Error"});
-        const userId = Math.floor(Math.random()*1000000);
-        let parentAddress=await addUserToTree(address,3)
+         const userId = Math.floor(Math.random()*1000000);
+        let parentAddress=await addUserToTree(address,3);
         await users.findOneAndUpdate(
             { address: referBy },
             { $push: { referTo: address } },        //updates the referto array and adds the new user that he referred to his array
@@ -115,6 +116,15 @@ export const updateProfile=async(req,res)=>{
             );
         
         await users.updateOne({address:referPaymentAddress},{$set:{ powerMatrixIncome:((existsReferPaymentAddress.powerMatrixIncome)+(referPaymentAmount))}})
+        await incomeTransactions.create({
+            fromUserId:userId,
+            toUserId:existsReferPaymentAddress1.userId,
+            fromAddress:address,
+            toAddress:referPaymentAddress,
+            incomeType:"Pro income",
+            amount:referPaymentAmount,
+            transactionHash:"transactionHash"
+        })
         await users.findOneAndUpdate(
             { address: referPaymentAddress },
             { $push: { myTeam: address } },        //updates the referto array and adds the new user that he referred to his array
@@ -133,11 +143,20 @@ export const updateProfile=async(req,res)=>{
         let i=0;
         while( i< uplineAddresses.length){            
              uplineAddressesData=await users.findOne({address:uplineAddresses[i]})
+             await incomeTransactions.create({
+                fromUserId:userId,
+                toUserId:uplineAddressesData.userId,
+                fromAddress:address,
+                toAddress:uplineAddresses[i],
+                incomeType:"GLobal income",
+                amount:uplineAddressesAmount[i],
+                transactionHash:"transactionHash"
+            })
              await users.updateOne({address:uplineAddresses[i]},{$set:{ globalMatrixIncome:((uplineAddressesData.globalMatrixIncome)+(uplineAddressesAmount[i]))}})
             i++;
         }
        
-       let proPower= await ProTreeNode.create({ address, amount:3 });
+     //  let proPower= await ProTreeNode.create({ address, amount:3 });
         return res.json({ success:true,status:201,message:"user joined"})
 
     }catch(error){
@@ -420,6 +439,9 @@ export const getProfile = async(req, res)=>{
         const totalNumberOfReferWhoJoinedToday=await getTodaysRefersCount(address);
         const fetchTeam=exists.myTeam.length;
         const userWhoJoinedToday=await getTeamSizeToday(exists.userId);
+        const totalProIncomeToday=await getTotalIncome(address,"Pro income");
+        const totalGlobalIncomeToday=await getTotalIncome(address,"GLobal income");
+
         console.log("userWhoJoinedToday",userWhoJoinedToday);
         let extraData={
             propowerincome:treeType.count,
@@ -430,6 +452,8 @@ export const getProfile = async(req, res)=>{
             totalNumberOfReferWhoJoinedToday:totalNumberOfReferWhoJoinedToday.totalTodaysRefers,
             userWhoJoinedToday:userWhoJoinedToday,
             fetchTeam,
+            totalProIncomeToday,
+            totalGlobalIncomeToday
         }
         if (!exists) {
             return res.status(400).json({ message: "No such user found" ,status:400});
@@ -567,7 +591,7 @@ async function addUserToTree(userAddress,treeType) {
         console.log("rootNode",rootNode);
         return adminAdd;
     }
-    console.log("Hello");
+    console.log("Hello",parentNode);
     // Add new user as a child to the parent node
     parentNode.children.push(userAddress);
     await parentNode.save();
@@ -971,3 +995,37 @@ export const fetchDistinctAddresses = async (req,res) => {
         throw error;
     }
 };
+
+
+async function getTotalIncome(toAddress, incomeType) {
+    try {
+        // Get the start and end of today
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0); // Set to start of the day
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999); // Set to end of the day
+
+        // Query to calculate the total income
+        const totalIncome = await incomeTransactions.aggregate([
+            {
+                $match: {
+                    toAddress: toAddress,
+                    incomeType: incomeType,
+                    createdAt: { $gte: startOfDay, $lte: endOfDay }
+                }
+            },
+            {
+                $group: {
+                    _id: null, // No grouping by a specific field
+                    totalAmount: { $sum: '$amount' }
+                }
+            }
+        ]);
+
+        // Return the total amount or 0 if no transactions
+        return totalIncome.length > 0 ? totalIncome[0].totalAmount : 0;
+    } catch (error) {
+        console.error('Error calculating total income:', error);
+        throw error;
+    }
+}
