@@ -58,7 +58,7 @@ cloudinary.config({
             console.log("3")
 
             referPaymentAddress=referBy
-            userAmount=Number(amount)*Number(0.75);
+            userAmount=Number(amount)*Number(0.9);
             monthlyAmount=amount-userAmount;
             dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
             userAmount=(userAmount*(0.9));
@@ -76,7 +76,7 @@ cloudinary.config({
         const uplineAddresses=await fetchUplineAddresses(3);
         const data={
             referPaymentAddress,
-            referPaymentAmount:userAmount,
+            referPaymentAmount:userAmount+Number(0.3),
             uplineAddresses,
             uplineAmount:[0.81,0.54,1.35],
             royalyAddress:process.env.DAILY_ROYALTIES,
@@ -229,68 +229,76 @@ export const previewProfile = async(req, res)=>{
 
 export const buyProIncome = async (req, res)=>{
     try{
-            const {address , referBy,amount} = req.body;
-            let referPaymentAddress,dailyRoyaltyAmount,userAmount,monthlyAmount=0;
-            const countingArray = [
-                5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
-                21, 22, 23, 24,  26, 27, 28, 29, 31, 32, 33, 34, 
-                36, 37, 38, 39,  41, 42, 43, 44,  46, 47, 48, 49, 
-                51, 52, 53, 54,  56, 57, 58, 59,  61, 62, 63, 64, 
-                66, 67, 68, 69,  71, 72, 73, 74,  76, 77, 78, 79, 
-                81, 82, 83, 84,  86, 87, 88, 89,  91, 92, 93, 94, 
-                96, 97, 98, 99
-              ];
-            if(!address  || !referBy || !amount){
-                return res.status(400).json({message : "Please provide all the details"});
-            }
-            const exists = await users.findOne({address});
-            const isReferExits =await users.findOne({address:referBy});
-            const existingNode = await ProTreeNode.findOne({ address, amount });
+        const {address , referBy,amount} = req.body;
+        let referPaymentAddress,dailyRoyaltyAmount=0,userAmount=0,monthlyAmount=0;
+        const countingArray = [
+            4,5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 
+            21, 22, 23, 24,  26, 27, 28, 29, 31, 32, 33, 34, 
+            36, 37, 38, 39,  41, 42, 43, 44,  46, 47, 48, 49, 
+            51, 52, 53, 54,  56, 57, 58, 59,  61, 62, 63, 64, 
+            66, 67, 68, 69,  71, 72, 73, 74,  76, 77, 78, 79, 
+            81, 82, 83, 84,  86, 87, 88, 89,  91, 92, 93, 94, 
+            96, 97, 98, 99
+          ];
         
-            if(!isReferExits){
-                return res.status(400).json({message : "Reffer Address Not found"})
-            }
+        if(!address  || !referBy || !amount){
+            return res.status(400).json({message : "Please provide all the details"});
+        }
+        const exists = await users.findOne({address});
+        const isReferExits =await users.findOne({address:referBy});
+        if(!isReferExits){
+            return res.status(400).json({message : "Reffer Address Not found"})
+        }
+        if(exists){
+            return res.status(200).json({message : "User already exists"})
+        }
+        if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
             
-            if (existingNode) {
-                return res.status(200).json({message : "User already Bought this package"})
-            }
-            if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
-                referPaymentAddress=isReferExits.referBy;
-                userAmount=Number(amount)*Number(0.9);
-                dailyRoyaltyAmount=amount-userAmount;
-            }
-            else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3){ 
-                referPaymentAddress=referBy
-                userAmount=Number(amount)*Number(0.9);
-                dailyRoyaltyAmount=amount-userAmount;
-            }
-            else if(countingArray.includes(isReferExits.referTo.length)){
-                referPaymentAddress=referBy
-                userAmount=Number(amount)*Number(0.75);
-                monthlyAmount=amount-userAmount;
-                dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
-                userAmount=(userAmount*(0.9));
-            }else if ([10, 15, 20, 25,30,35,40,45,55,60,65,70,75,80,85,90,95,100].includes(isReferExits.referTo.length)){
-                referPaymentAddress=isReferExits.referBy;
-                userAmount=Number(amount)*Number(0.75);
-                monthlyAmount=amount-userAmount;
-                dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
-                userAmount=(userAmount*(0.9));
-            }
-            const data={
-                dailyRoyaltyAddress:process.env.DAILY_ROYALTIES,
-                paymentAddress:referPaymentAddress,
-                monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
-                dailyRoyaltyAmount,
-                userAmount,
-                monthlyAmount
-            }
-            if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
-            return res.json({ success:true,status:200,data:data,message:"All good"})
-        
+            referPaymentAddress=isReferExits.parentAddress;
+            userAmount=Number(amount)*Number(0.9);
+            dailyRoyaltyAmount=amount-userAmount;
+        }
+        else if(Number(isReferExits.referTo.length)==1||Number(isReferExits.referTo.length)==3){ 
+            console.log("2")
+
+            referPaymentAddress=referBy
+            userAmount=Number(amount)*Number(0.9);
+            dailyRoyaltyAmount=amount-userAmount;
+        }
+        else if(countingArray.includes(isReferExits.referTo.length)){
+            console.log("3")
+
+            referPaymentAddress=referBy
+            userAmount=Number(amount)*Number(0.9);
+            monthlyAmount=amount-userAmount;
+            dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
+            userAmount=(userAmount*(0.9));
+        }else if ([10, 15, 20, 25,30,35,40,45,55,60,65,70,75,80,85,90,95,100].includes(isReferExits.referTo.length)){
+            console.log("4")
+
+            referPaymentAddress=isReferExits.parentAddress;
+            userAmount=Number(amount)*Number(0.75);
+            monthlyAmount=amount-userAmount;
+            dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
+            userAmount=(userAmount*(0.9));
+        }
+        console.log("isReferExits.referTo.length",isReferExits.referTo.length);
+        if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
+        const uplineAddresses=await fetchUplineAddresses(3);
+        const data={
+            referPaymentAddress,
+            referPaymentAmount:userAmount+Number(0.3),
+            uplineAddresses,
+            uplineAmount:[0.81,0.54,1.35],
+            royalyAddress:process.env.DAILY_ROYALTIES,
+            royalyAmount:dailyRoyaltyAmount,
+            monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
+            monthlyAmount
+        }
+        return res.json({ success:true,status:200,data:data,message:"All good"})
     }catch(error){
-        console.log(`error in create profile : ${error}`);
-        return res.json({success:false,status:500,error : "Internal Server error"})
+        console.log(`error in Buy Pro profile : ${error}`);
+        return res.json({success:false,status:500,message :error})
     }
 }
 export const updateProIncome=async(req,res)=>{
