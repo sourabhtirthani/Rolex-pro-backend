@@ -76,11 +76,11 @@ cloudinary.config({
         const uplineAddresses=await fetchUplineAddresses(3);
         const data={
             referPaymentAddress,
-            referPaymentAmount:userAmount+Number(0.3),
+            referPaymentAmount:userAmount,
             uplineAddresses,
             uplineAmount:[0.81,0.54,1.35],
             royalyAddress:process.env.DAILY_ROYALTIES,
-            royalyAmount:dailyRoyaltyAmount,
+            royalyAmount:dailyRoyaltyAmount+Number(0.3),
             monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
             monthlyAmount
         }
@@ -249,9 +249,7 @@ export const buyProIncome = async (req, res)=>{
         if(!isReferExits){
             return res.status(400).json({message : "Reffer Address Not found"})
         }
-        if(exists){
-            return res.status(200).json({message : "User already exists"})
-        }
+       
         if(Number(isReferExits.referTo.length)==0 || Number(isReferExits.referTo.length)==2 ){
             
             referPaymentAddress=isReferExits.parentAddress;
