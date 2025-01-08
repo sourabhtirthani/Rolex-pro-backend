@@ -71,16 +71,16 @@ cloudinary.config({
             dailyRoyaltyAmount=userAmount-(userAmount*(0.9));
             userAmount=(userAmount*(0.9));
         }
-        console.log("isReferExits.referTo.length",isReferExits.referTo.length);
         if(!referPaymentAddress) referPaymentAddress=process.env.ADMIN_ADDRESS;
         const uplineAddresses=await fetchUplineAddresses(3);
+        uplineAddresses[3]=referBy;
         const data={
             referPaymentAddress,
             referPaymentAmount:userAmount,
             uplineAddresses,
-            uplineAmount:[0.81,0.54,1.35],
+            uplineAmount:[0.81,0.54,1.35,0.3],
             royalyAddress:process.env.DAILY_ROYALTIES,
-            royalyAmount:dailyRoyaltyAmount+Number(0.3),
+            royalyAmount:dailyRoyaltyAmount,
             monthlyRoyaltyAddress:process.env.MONTHLY_ROYALTIES,
             monthlyAmount
         }
